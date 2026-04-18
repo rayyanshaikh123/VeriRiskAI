@@ -34,7 +34,17 @@ export default function ResultsPage() {
     : 0.95;
 
   return (
-    <div className="min-h-screen bg-[#f8f9ff] px-6 py-10 text-[#0b1c30] md:px-8">
+    <div className="min-h-screen bg-[#f8f9ff] px-6 pb-10 pt-24 text-[#0b1c30] md:px-8 md:pt-28">
+      <header className="fixed left-0 top-0 z-50 w-full">
+        <div className="mx-auto flex h-20 w-full max-w-screen-2xl items-center justify-center px-6 md:px-8">
+          <nav className="master-pill-nav" aria-label="Primary navigation">
+            <Link className="master-pill-item" href="/">Home</Link>
+            <Link className="master-pill-item" href="/#quick-start">Quick Start</Link>
+            <Link className="master-pill-item master-pill-upload" href="/upload">Upload</Link>
+          </nav>
+        </div>
+      </header>
+
       <div className="mx-auto max-w-6xl">
         <section className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
