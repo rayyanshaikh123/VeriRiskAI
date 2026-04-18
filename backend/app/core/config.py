@@ -17,7 +17,19 @@ class Settings(BaseModel):
     max_image_upload_bytes: int = 2_000_000
     max_video_upload_bytes: int = 15_000_000
     allowed_video_formats: tuple[str, ...] = ("MP4", "WEBM")
-    video_frame_sample_count: int = 12
+    video_frame_sample_count: int = 16
+    frequency_anomaly_threshold: float = 0.6
+    temporal_inconsistency_threshold: float = 0.6
+    fusion_xgb_model_path: str | None = os.getenv("FUSION_XGB_MODEL_PATH")
+    log_level: str = os.getenv("LOG_LEVEL", "INFO")
+    spatial_model_url: str = os.getenv(
+        "SPATIAL_MODEL_URL",
+        "https://huggingface.co/onnx-community/Deep-Fake-Detector-v2-Model-ONNX/resolve/main/onnx/model_int8.onnx?download=true",
+    )
+    spatial_model_path: str = os.getenv(
+        "SPATIAL_MODEL_PATH",
+        "backend/models/deepfake_v2_int8.onnx",
+    )
     cors_allowed_origins: tuple[str, ...] = (
         "http://localhost:3000",
         "http://127.0.0.1:3000",

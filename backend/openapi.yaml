@@ -348,6 +348,12 @@ components:
           title: Detail
       type: object
       title: HTTPValidationError
+    InputType:
+      type: string
+      enum:
+      - image
+      - video
+      title: InputType
     Pagination:
       properties:
         limit:
@@ -423,6 +429,26 @@ components:
       - spatial_fake_score
       - frequency_fake_score
       title: SignalBreakdown
+    SignalFlags:
+      properties:
+        artifact_flag:
+          type: boolean
+          title: Artifact Flag
+          default: false
+        frequency_anomaly:
+          type: boolean
+          title: Frequency Anomaly
+          default: false
+        temporal_inconsistency:
+          type: boolean
+          title: Temporal Inconsistency
+          default: false
+        watermark_detected:
+          type: boolean
+          title: Watermark Detected
+          default: false
+      type: object
+      title: SignalFlags
     ValidationError:
       properties:
         loc:
@@ -456,12 +482,6 @@ components:
       - REVIEW
       - REJECT
       title: Verdict
-    InputType:
-      type: string
-      enum:
-      - image
-      - video
-      title: InputType
     VerifyUploadEnvelope:
       properties:
         success:
@@ -509,9 +529,12 @@ components:
           title: Confidence
         signals:
           $ref: '#/components/schemas/SignalBreakdown'
+        flags:
+          $ref: '#/components/schemas/SignalFlags'
       type: object
       required:
       - verdict
       - confidence
       - signals
+      - flags
       title: VerifyUploadResponse

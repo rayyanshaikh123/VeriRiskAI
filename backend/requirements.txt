@@ -4,3 +4,8 @@ pydantic
 redis
 pillow
 pyyaml
+numpy
+opencv-python
+scipy
+insightface
+onnxruntime
