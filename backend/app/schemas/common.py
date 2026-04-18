@@ -5,31 +5,11 @@ from typing import Any, Dict, Optional
 from pydantic import BaseModel
 
 
-class SessionType(str, Enum):
-    photo = "photo"
-    video = "video"
-
-
-class ChallengeType(str, Enum):
-    blink = "blink"
-    head_turn = "head_turn"
-    smile = "smile"
-    number = "number"
-
 
 class Verdict(str, Enum):
     ACCEPT = "ACCEPT"
     REVIEW = "REVIEW"
     REJECT = "REJECT"
-
-
-class SessionState(str, Enum):
-    CREATED = "CREATED"
-    IN_PROGRESS = "IN_PROGRESS"
-    CHALLENGE_PASSED = "CHALLENGE_PASSED"
-    SUBMITTED = "SUBMITTED"
-    COMPLETED = "COMPLETED"
-    EXPIRED = "EXPIRED"
 
 
 class ErrorCode(str, Enum):

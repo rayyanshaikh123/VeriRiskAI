@@ -55,6 +55,7 @@ async def upload_verification(request: Request, body: VerifyUploadRequest):
     }
     if body.input_type == InputType.video:
         expected_keys.add("temporal_score")
+        expected_keys.add("behavioral_score")
 
     if body.input_type == InputType.image:
         try:
@@ -103,6 +104,7 @@ async def upload_verification(request: Request, body: VerifyUploadRequest):
             "artifact_flag": raw_signals.get("artifact_flag"),
             "artifact_score": raw_signals.get("artifact_score"),
             "watermark_detected": raw_signals.get("watermark_detected"),
+            "behavioral_score": raw_signals.get("behavioral_score"),
         },
     )
 
@@ -112,6 +114,11 @@ async def upload_verification(request: Request, body: VerifyUploadRequest):
         temporal_score=(
             _clamp(raw_signals["temporal_score"])
             if raw_signals.get("temporal_score") is not None
+            else None
+        ),
+        behavioral_score=(
+            _clamp(raw_signals["behavioral_score"])
+            if raw_signals.get("behavioral_score") is not None
             else None
         ),
     )

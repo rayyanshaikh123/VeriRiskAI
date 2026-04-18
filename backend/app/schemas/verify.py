@@ -15,6 +15,7 @@ class SignalBreakdown(BaseModel):
     spatial_fake_score: float = Field(ge=0.0, le=1.0)
     frequency_fake_score: float = Field(ge=0.0, le=1.0)
     temporal_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    behavioral_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
 
 
 class SignalFlags(BaseModel):

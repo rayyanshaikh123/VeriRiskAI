@@ -7,7 +7,6 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api.v1.admin import router as admin_router
 from app.api.v1.verify import router as verify_router
 from app.core.config import settings
 from app.schemas.common import ErrorCode
@@ -27,7 +26,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(verify_router, prefix="/v1")
-app.include_router(admin_router, prefix="/v1")
 
 
 @app.middleware("http")
