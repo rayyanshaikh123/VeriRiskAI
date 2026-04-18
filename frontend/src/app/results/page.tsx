@@ -27,10 +27,10 @@ export default function ResultsPage() {
   const confidence = submitResult?.confidence ?? 0.95;
   const riskScore = Math.max(1, Math.round((1 - confidence) * 100));
   const rating = riskScore <= 20 ? "Low Risk" : riskScore <= 60 ? "Medium Risk" : "High Risk";
-  const faceMatch = submitResult?.signals.face_match_score ?? 0.98;
-  const liveness = submitResult?.signals.liveness_score ?? 0.99;
+  const spatialScore = submitResult?.signals.spatial_fake_score ?? 0.05;
+  const frequencyScore = submitResult?.signals.frequency_fake_score ?? 0.05;
   const forensic = submitResult
-    ? 1 - ((submitResult.signals.spatial_fake_score + submitResult.signals.frequency_fake_score) / 2)
+    ? 1 - (spatialScore + frequencyScore) / 2
     : 0.95;
 
   return (
@@ -63,7 +63,7 @@ export default function ResultsPage() {
           </div>
           <div className="text-sm text-[#45464d]">
             <p className="font-medium">
-              Reference: {submitResult?.session_id ?? "VR-882-X9"}
+              Reference: {submitResult ? "UPLOAD-RESULT" : "VR-882-X9"}
             </p>
             <p className="text-xs opacity-70">Completed: Oct 24, 2023 • 14:22 UTC</p>
           </div>
@@ -122,21 +122,21 @@ export default function ResultsPage() {
         <section className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
           <article className="rounded-[1.5rem] bg-[#eff4ff] p-8">
             <span className="material-symbols-outlined mb-4 text-[#45464d]">
-              face
+              hide_image
             </span>
             <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#45464d]">
-              Face Match
+              Spatial Score
             </p>
-            <p className="text-4xl font-bold tracking-tight">{percent(faceMatch)}</p>
+            <p className="text-4xl font-bold tracking-tight">{percent(1 - spatialScore)}</p>
           </article>
           <article className="rounded-[1.5rem] bg-[#eff4ff] p-8">
             <span className="material-symbols-outlined mb-4 text-[#45464d]">
-              videocam
+              graphic_eq
             </span>
             <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#45464d]">
-              Liveness Score
+              Frequency Score
             </p>
-            <p className="text-4xl font-bold tracking-tight">{percent(liveness)}</p>
+            <p className="text-4xl font-bold tracking-tight">{percent(1 - frequencyScore)}</p>
           </article>
           <article className="rounded-[1.5rem] bg-[#eff4ff] p-8">
             <span className="material-symbols-outlined mb-4 text-[#45464d]">

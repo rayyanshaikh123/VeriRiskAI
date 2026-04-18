@@ -1,3 +1,3 @@
-export const MIN_FRAMES = 8;
-export const MAX_FRAMES = 60;
 export const DEFAULT_CAPTURE_DELAY_MS = 400;
+export const MAX_IMAGE_UPLOAD_BYTES = 2_000_000;
+export const MAX_VIDEO_UPLOAD_BYTES = 15_000_000;

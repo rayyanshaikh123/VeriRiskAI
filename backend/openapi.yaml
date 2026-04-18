@@ -3,17 +3,17 @@ info:
   title: VerifyIQ API
   version: 1.0.0
 paths:
-  /v1/verify/start:
+  /v1/verify/upload:
     post:
       tags:
       - verify
-      summary: Start Verification
-      operationId: start_verification_v1_verify_start_post
+      summary: Upload Verification
+      operationId: upload_verification_v1_verify_upload_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/VerifyStartRequest'
+              $ref: '#/components/schemas/VerifyUploadRequest'
         required: true
       responses:
         '200':
@@ -21,66 +21,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/VerifyStartEnvelope'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-  /v1/verify/frame:
-    post:
-      tags:
-      - verify
-      summary: Submit Frame
-      operationId: submit_frame_v1_verify_frame_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/VerifyFrameRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VerifyFrameEnvelope'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-  /v1/verify/submit:
-    post:
-      tags:
-      - verify
-      summary: Submit Verification
-      operationId: submit_verification_v1_verify_submit_post
-      parameters:
-      - name: Idempotency-Key
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Idempotency-Key
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/VerifySubmitRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VerifySubmitEnvelope'
+                $ref: '#/components/schemas/VerifyUploadEnvelope'
         '422':
           description: Validation Error
           content:
@@ -355,33 +296,6 @@ components:
       - entries
       - pagination
       title: AuditLogList
-    ChallengePrompt:
-      properties:
-        type:
-          $ref: '#/components/schemas/ChallengeType'
-        value:
-          anyOf:
-          - type: string
-          - type: integer
-          title: Value
-        expires_at:
-          type: string
-          format: date-time
-          title: Expires At
-      type: object
-      required:
-      - type
-      - value
-      - expires_at
-      title: ChallengePrompt
-    ChallengeType:
-      type: string
-      enum:
-      - blink
-      - head_turn
-      - smile
-      - number
-      title: ChallengeType
     ErrorCode:
       type: string
       enum:
@@ -390,6 +304,7 @@ components:
       - SESSION_EXPIRED
       - INVALID_FRAME
       - INVALID_IMAGE
+      - INVALID_VIDEO
       - RATE_LIMITED
       - UNAUTHORIZED
       - FORBIDDEN
@@ -433,24 +348,6 @@ components:
           title: Detail
       type: object
       title: HTTPValidationError
-    HeatmapArtifact:
-      properties:
-        url:
-          type: string
-          title: Url
-        expires_at:
-          type: string
-          format: date-time
-          title: Expires At
-        mime_type:
-          type: string
-          title: Mime Type
-      type: object
-      required:
-      - url
-      - expires_at
-      - mime_type
-      title: HeatmapArtifact
     Pagination:
       properties:
         limit:
@@ -504,16 +401,6 @@ components:
       title: SessionType
     SignalBreakdown:
       properties:
-        face_match_score:
-          type: number
-          maximum: 1.0
-          minimum: 0.0
-          title: Face Match Score
-        liveness_score:
-          type: number
-          maximum: 1.0
-          minimum: 0.0
-          title: Liveness Score
         spatial_fake_score:
           type: number
           maximum: 1.0
@@ -531,30 +418,10 @@ components:
             minimum: 0.0
           - type: 'null'
           title: Temporal Score
-        clip_score:
-          type: number
-          maximum: 1.0
-          minimum: 0.0
-          title: Clip Score
-        behavioral_score:
-          type: number
-          maximum: 1.0
-          minimum: 0.0
-          title: Behavioral Score
-        challenge_score:
-          type: number
-          maximum: 1.0
-          minimum: 0.0
-          title: Challenge Score
       type: object
       required:
-      - face_match_score
-      - liveness_score
       - spatial_fake_score
       - frequency_fake_score
-      - clip_score
-      - behavioral_score
-      - challenge_score
       title: SignalBreakdown
     ValidationError:
       properties:
@@ -589,14 +456,20 @@ components:
       - REVIEW
       - REJECT
       title: Verdict
-    VerifyFrameEnvelope:
+    InputType:
+      type: string
+      enum:
+      - image
+      - video
+      title: InputType
+    VerifyUploadEnvelope:
       properties:
         success:
           type: boolean
           title: Success
         data:
           anyOf:
-          - $ref: '#/components/schemas/VerifyFrameResponse'
+          - $ref: '#/components/schemas/VerifyUploadResponse'
           - type: 'null'
         error:
           anyOf:
@@ -608,125 +481,24 @@ components:
       required:
       - success
       - meta
-      title: VerifyFrameEnvelope
-    VerifyFrameRequest:
-      properties:
-        session_id:
-          type: string
-          title: Session Id
-        frame_b64:
-          type: string
-          title: Frame B64
-        frame_index:
-          type: integer
-          minimum: 0.0
-          title: Frame Index
-      type: object
-      required:
-      - session_id
-      - frame_b64
-      - frame_index
-      title: VerifyFrameRequest
-    VerifyFrameResponse:
-      properties:
-        liveness_score:
-          type: number
-          maximum: 1.0
-          minimum: 0.0
-          title: Liveness Score
-        face_detected:
-          type: boolean
-          title: Face Detected
-        challenge_passed:
-          type: boolean
-          title: Challenge Passed
-      type: object
-      required:
-      - liveness_score
-      - face_detected
-      - challenge_passed
-      title: VerifyFrameResponse
-    VerifyStartEnvelope:
-      properties:
-        success:
-          type: boolean
-          title: Success
-        data:
-          anyOf:
-          - $ref: '#/components/schemas/VerifyStartResponse'
-          - type: 'null'
-        error:
-          anyOf:
-          - $ref: '#/components/schemas/ErrorResponse'
-          - type: 'null'
-        meta:
-          $ref: '#/components/schemas/ResponseMeta'
-      type: object
-      required:
-      - success
-      - meta
-      title: VerifyStartEnvelope
-    VerifyStartRequest:
+      title: VerifyUploadEnvelope
+    VerifyUploadRequest:
       properties:
         user_id:
           type: string
           title: User Id
-        session_type:
-          $ref: '#/components/schemas/SessionType'
+        input_type:
+          $ref: '#/components/schemas/InputType'
+        file:
+          type: string
+          title: File
       type: object
       required:
       - user_id
-      - session_type
-      title: VerifyStartRequest
-    VerifyStartResponse:
-      properties:
-        session_id:
-          type: string
-          title: Session Id
-        challenges:
-          items:
-            $ref: '#/components/schemas/ChallengePrompt'
-          type: array
-          title: Challenges
-      type: object
-      required:
-      - session_id
-      - challenges
-      title: VerifyStartResponse
-    VerifySubmitEnvelope:
-      properties:
-        success:
-          type: boolean
-          title: Success
-        data:
-          anyOf:
-          - $ref: '#/components/schemas/VerifySubmitResponse'
-          - type: 'null'
-        error:
-          anyOf:
-          - $ref: '#/components/schemas/ErrorResponse'
-          - type: 'null'
-        meta:
-          $ref: '#/components/schemas/ResponseMeta'
-      type: object
-      required:
-      - success
-      - meta
-      title: VerifySubmitEnvelope
-    VerifySubmitRequest:
-      properties:
-        session_id:
-          type: string
-          title: Session Id
-        id_image_b64:
-          type: string
-          title: Id Image B64
-      type: object
-      required:
-      - session_id
-      - id_image_b64
-      title: VerifySubmitRequest
-    VerifySubmitResponse:
+      - input_type
+      - file
+      title: VerifyUploadRequest
+    VerifyUploadResponse:
       properties:
         verdict:
           $ref: '#/components/schemas/Verdict'
@@ -735,20 +507,11 @@ components:
           maximum: 1.0
           minimum: 0.0
           title: Confidence
-        heatmap:
-          anyOf:
-          - $ref: '#/components/schemas/HeatmapArtifact'
-          - type: 'null'
         signals:
           $ref: '#/components/schemas/SignalBreakdown'
-        session_id:
-          type: string
-          title: Session Id
       type: object
       required:
       - verdict
       - confidence
-      - heatmap
       - signals
-      - session_id
-      title: VerifySubmitResponse
+      title: VerifyUploadResponse
