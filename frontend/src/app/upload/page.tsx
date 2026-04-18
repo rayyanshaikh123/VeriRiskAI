@@ -245,11 +245,10 @@ export default function UploadPage() {
                               setPreviewUrl(null);
                             }
                           }}
-                          className={`rounded-2xl border px-4 py-2 text-left text-xs font-semibold transition ${
-                            inputType === option.value
+                          className={`rounded-2xl border px-4 py-2 text-left text-xs font-semibold transition ${inputType === option.value
                               ? "border-black bg-black text-white"
                               : "border-[#d3e4fe] bg-white text-[#57657b]"
-                          }`}
+                            }`}
                         >
                           {option.label}
                         </button>
@@ -311,11 +310,10 @@ export default function UploadPage() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  className={`group flex items-center space-x-4 rounded-xl px-8 py-4 text-lg font-bold transition ${
-                    isSubmitting
+                  className={`group flex items-center space-x-4 rounded-xl px-8 py-4 text-lg font-bold transition ${isSubmitting
                       ? "cursor-not-allowed bg-[#d3e4fe] text-[#57657b]"
                       : "bg-black text-white"
-                  }`}
+                    }`}
                 >
                   <span>{isSubmitting ? "Uploading..." : "Continue to Processing"}</span>
                   <span className="material-symbols-outlined transition-transform group-hover:translate-x-1">
