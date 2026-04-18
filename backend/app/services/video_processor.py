@@ -66,7 +66,7 @@ class VideoProcessor:
             return b""
         return buf.tobytes()
 
-    def process(self, video_bytes: bytes) -> Dict[str, float | bool]:
+    def process(self, video_bytes: bytes) -> Dict[str, float | bool | None]:
         frames = self._extract_frames(video_bytes)
         if not frames:
             self._logger.warning("No frames extracted")
@@ -110,11 +110,13 @@ class VideoProcessor:
             watermark_flags.append(bool(watermark.get("watermark_detected", False)))
             watermark_scores.append(float(watermark.get("watermark_score", 0.0)))
 
-        spatial_avg = float(np.mean(spatial_scores))
-        frequency_avg = float(np.mean(frequency_scores))
-        artifact_avg = float(np.mean(artifact_scores))
-        watermark_avg = float(np.mean(watermark_scores)) if watermark_scores else 0.0
-        temporal_score = float(self._temporal_detector.detect(frame_bytes).get("score", 0.0))
+        spatial_avg = float(np.max(spatial_scores))
+        frequency_avg = float(np.max(frequency_scores))
+        artifact_avg = float(np.max(artifact_scores))
+        watermark_avg = float(np.max(watermark_scores)) if watermark_scores else 0.0
+        temporal_result = self._temporal_detector.detect(frame_bytes)
+        temporal_value = temporal_result.get("score")
+        temporal_score = clamp01(temporal_value) if temporal_value is not None else None
         behavioral = self._behavioral_analyzer.analyze(frame_bytes)
         behavioral_score = float(behavioral.get("score", 0.0))
 
@@ -135,7 +137,7 @@ class VideoProcessor:
         return {
             "spatial_fake_score": clamp01(spatial_avg),
             "frequency_fake_score": clamp01(frequency_avg),
-            "temporal_score": clamp01(temporal_score),
+            "temporal_score": temporal_score,
             "artifact_flag": any(artifact_flags),
             "artifact_score": clamp01(artifact_avg),
             "watermark_detected": any(watermark_flags),

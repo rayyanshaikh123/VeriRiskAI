@@ -30,10 +30,11 @@ function formatVerdict(verdict?: string) {
 }
 
 export default function ResultsPage() {
-  const { submitResult } = useSessionStore();
-  const verdict = formatVerdict(submitResult?.verdict);
-  const isReal = verdict === "ACCEPTED";
+  const { submitResult, inputType, previewUrl, previewDataUrl } = useSessionStore();
   const confidence = clamp01(submitResult?.confidence ?? 0.95);
+  const verdict = formatVerdict(submitResult?.verdict);
+  const isReal = confidence >= 0.5;
+  const displayVerdict = isReal ? "ACCEPTED" : "REJECTED";
   const confidencePct = Math.round(confidence * 100);
   const riskScore = Math.max(1, Math.round((1 - confidence) * 100));
   const rating = riskScore <= 20 ? "Low Risk" : riskScore <= 60 ? "Medium Risk" : "High Risk";
@@ -88,6 +89,8 @@ export default function ResultsPage() {
   const signalTotal = signalWeights.reduce((sum, item) => sum + item.value, 0) || 1;
   const riskRing = Math.max(2, riskScore);
   const confidenceRing = Math.max(2, confidencePct);
+
+  const previewSource = previewDataUrl ?? previewUrl;
 
   const downloadReport = () => {
     const doc = new jsPDF({
@@ -298,7 +301,8 @@ export default function ResultsPage() {
         <div className="mx-auto flex h-20 w-full max-w-screen-2xl items-center justify-center px-6 md:px-8">
           <nav className="master-pill-nav" aria-label="Primary navigation">
             <Link className="master-pill-item" href="/">Home</Link>
-            <Link className="master-pill-item" href="/#quick-start">Quick Start</Link>
+            <Link className="master-pill-item" href="/#features">Features</Link>
+            <Link className="master-pill-item" href="/#quick-start">How It Works</Link>
             <Link className="master-pill-item master-pill-upload" href="/upload">Upload</Link>
           </nav>
         </div>
@@ -368,7 +372,7 @@ export default function ResultsPage() {
                 </span>
               </div>
               <div>
-                <p className="text-3xl font-semibold tracking-tight text-primary">{verdict}</p>
+                <p className="text-3xl font-semibold tracking-tight text-primary">{displayVerdict}</p>
                 <p className="mt-1 text-sm text-muted">
                   AI forensic checks completed with a final confidence score.
                 </p>
@@ -431,6 +435,38 @@ export default function ResultsPage() {
             </div>
           </article>
         </section>
+
+        {previewSource && (
+          <section className="mb-8">
+            <article className="surface-card p-8">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-xl font-semibold tracking-tight text-primary">
+                  Uploaded Media
+                </h2>
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
+                  Preview
+                </span>
+              </div>
+              <div className="rounded-xl border border-muted/40 bg-[var(--surface-muted)] p-4">
+                {inputType === "image" ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={previewSource}
+                    alt="Uploaded media preview"
+                    className="max-h-[420px] w-full rounded-lg object-contain"
+                  />
+                ) : (
+                  <video
+                    src={previewSource}
+                    controls
+                    playsInline
+                    className="max-h-[420px] w-full rounded-lg object-contain"
+                  />
+                )}
+              </div>
+            </article>
+          </section>
+        )}
 
         <section className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-12">
           <article className="surface-card p-8 lg:col-span-7">

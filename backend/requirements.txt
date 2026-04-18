@@ -8,3 +8,5 @@ opencv-python
 scipy
 insightface
 onnxruntime
+timm
+torch

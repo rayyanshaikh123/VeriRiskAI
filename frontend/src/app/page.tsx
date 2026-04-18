@@ -71,8 +71,11 @@ export default function HomePage() {
             <a className="master-pill-item is-active" href="#hero-primary">
               Home
             </a>
+            <a className="master-pill-item" href="#features">
+              Features
+            </a>
             <a className="master-pill-item" href="#quick-start">
-              Quick Start
+              How It Works
             </a>
             <Link className="master-pill-item master-pill-upload" href="/upload">
               Upload

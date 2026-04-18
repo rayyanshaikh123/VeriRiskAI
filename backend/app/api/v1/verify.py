@@ -136,6 +136,7 @@ async def upload_verification(request: Request, body: VerifyUploadRequest):
     fusion_payload = signals.model_dump() | {
         "artifact_score": raw_signals.get("artifact_score", 0.0),
         "watermark_detected": flags.watermark_detected,
+        "watermark_score": raw_signals.get("watermark_score", 0.0),
     }
     fusion_result = _fusion_engine.fuse(fusion_payload)
     confidence = _clamp(fusion_result.get("confidence", 0.5))

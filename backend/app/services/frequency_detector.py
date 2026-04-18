@@ -9,6 +9,17 @@ from app.utils.normalization import clamp01
 class FrequencyDetector:
     """FFT-based frequency analysis for synthetic artifact detection."""
 
+    def _radial_profile(self, power: np.ndarray) -> np.ndarray:
+        h, w = power.shape
+        cy, cx = h // 2, w // 2
+        y, x = np.ogrid[:h, :w]
+        radius = np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
+        radius_int = radius.astype(np.int32)
+        max_radius = int(radius_int.max()) + 1
+        radial_energy = np.bincount(radius_int.ravel(), power.ravel(), minlength=max_radius)
+        counts = np.bincount(radius_int.ravel(), minlength=max_radius)
+        return radial_energy / (counts + 1e-6)
+
     def _decode_grayscale(self, frame: bytes) -> np.ndarray | None:
         data = np.frombuffer(frame, dtype=np.uint8)
         image = cv2.imdecode(data, cv2.IMREAD_GRAYSCALE)
@@ -40,9 +51,29 @@ class FrequencyDetector:
         noise_variance = float(np.var(residual))
         variance_norm = clamp01(noise_variance / 0.02)
 
-        score = clamp01(0.6 * high_ratio + 0.4 * variance_norm)
+        base_score = clamp01(0.6 * high_ratio + 0.4 * variance_norm)
+
+        radial_profile = self._radial_profile(power)
+        log_profile = np.log(radial_profile + 1e-8)
+        radii = np.arange(len(log_profile), dtype=np.float32)
+        slope, intercept = np.polyfit(radii, log_profile, 1)
+        expected = slope * radii + intercept
+        residual = log_profile - expected
+        start = int(len(residual) * 0.65)
+        high_residual = residual[start:] if start < len(residual) else residual
+        irregularity = float(np.std(high_residual))
+        irregularity_score = clamp01(irregularity / 0.5)
+
+        high_band = radial_profile[start:] if start < len(radial_profile) else radial_profile
+        peakiness = float(np.max(high_band) / (np.mean(high_band) + 1e-6) - 1.0) if high_band.size else 0.0
+        peak_score = clamp01(peakiness / 3.0)
+
+        radial_score = clamp01(0.6 * irregularity_score + 0.4 * peak_score)
+        score = clamp01(0.6 * base_score + 0.4 * radial_score)
         return {
             "score": float(score),
             "high_freq_ratio": float(high_ratio),
             "noise_variance": float(noise_variance),
+            "radial_decay_slope": float(slope),
+            "radial_irregularity": float(irregularity),
         }
