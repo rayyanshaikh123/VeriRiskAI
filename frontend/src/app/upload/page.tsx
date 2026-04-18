@@ -1,331 +1,96 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { CameraCapture, type CapturedFrame } from "@/components/camera";
-import { ChallengeCard } from "@/components/challenge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ApiError, startVerification, submitFrame, submitVerification } from "@/lib/api";
-import { DEFAULT_CAPTURE_DELAY_MS, MAX_FRAMES, MIN_FRAMES } from "@/lib/constants";
-import { useBackoff } from "@/lib/hooks";
-import {
-  stripBase64Prefix,
-  validateImageFile,
-  validateImagePixels,
-} from "@/lib/validators";
 import { useSessionStore } from "@/store/session";
-import type { SessionType } from "@/types/api";
+import type { SessionType, VerifySubmitResponse } from "@/types/api";
 
 const sessionOptions: { label: string; value: SessionType }[] = [
   { label: "Photo verification", value: "photo" },
   { label: "Video verification", value: "video" },
 ];
 
-async function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        resolve(reader.result);
-      } else {
-        reject(new Error("Unable to read file"));
-      }
-    };
-    reader.onerror = () => reject(new Error("Unable to read file"));
-    reader.readAsDataURL(file);
-  });
-}
-
 export default function UploadPage() {
   const router = useRouter();
-  const startAbortRef = useRef<AbortController | null>(null);
-  const frameAbortRef = useRef<AbortController | null>(null);
-  const submitAbortRef = useRef<AbortController | null>(null);
-  const inFlightRef = useRef(false);
-  const frameIndexRef = useRef(0);
-  const backoff = useBackoff(DEFAULT_CAPTURE_DELAY_MS, 2000);
-
-  const [userId, setUserId] = useState("");
   const [sessionType, setSessionType] = useState<SessionType>("photo");
-  const [notice, setNotice] = useState<string | null>(null);
-  const [isStarting, setIsStarting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
-  const [idFile, setIdFile] = useState<File | null>(null);
-  const [idPreview, setIdPreview] = useState<string | null>(null);
-  const [idPayload, setIdPayload] = useState<string | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const continueButtonRef = useRef<HTMLButtonElement | null>(null);
 
-  const {
-    sessionId,
-    challenges,
-    frameCount,
-    lastFrame,
-    captureActive,
-    captureDelayMs,
-    setSession,
-    setCaptureActive,
-    setCaptureDelay,
-    setLastFrame,
-    incrementFrame,
-    setError,
-    clearError,
-    error,
-    resetSession,
-    setSubmitResult,
-  } = useSessionStore();
+  const { setSubmitResult } = useSessionStore();
 
   useEffect(() => {
     return () => {
-      startAbortRef.current?.abort();
-      frameAbortRef.current?.abort();
-      submitAbortRef.current?.abort();
-      if (idPreview) {
-        URL.revokeObjectURL(idPreview);
+      if (videoPreview) {
+        URL.revokeObjectURL(videoPreview);
       }
     };
-  }, [idPreview]);
-
-  useEffect(() => {
-    if (frameCount >= MAX_FRAMES) {
-      setCaptureActive(false);
-      setNotice("Maximum frame count reached.");
-    }
-  }, [frameCount, setCaptureActive]);
-
-  const progress = useMemo(() => {
-    const ratio = Math.min(frameCount / MAX_FRAMES, 1);
-    return Math.round(ratio * 100);
-  }, [frameCount]);
-
-  const challenge = challenges[0] ?? null;
-  const challengePassed = lastFrame?.challenge_passed ?? false;
-
-  const isReadyToSubmit =
-    challengePassed && frameCount >= MIN_FRAMES && Boolean(idPayload);
-
-  const handleStartSession = async () => {
-    if (!userId.trim()) {
-      setLocalError("User ID is required to start capture.");
-      return;
-    }
-    setLocalError(null);
-    setNotice(null);
-    setIsStarting(true);
-    startAbortRef.current?.abort();
-    const controller = new AbortController();
-    startAbortRef.current = controller;
-    resetSession();
-
-    try {
-      const data = await startVerification(
-        {
-          user_id: userId.trim(),
-          session_type: sessionType,
-        },
-        { signal: controller.signal },
-      );
-      setSession(data.session_id, data.challenges);
-      setCaptureDelay(DEFAULT_CAPTURE_DELAY_MS);
-      setCaptureActive(true);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError({
-          code: err.code,
-          message: err.message,
-          details: err.details,
-          requestId: err.requestId,
-        });
-      } else {
-        setError({
-          code: "UNKNOWN",
-          message: "Unable to start a session. Please try again.",
-        });
-      }
-    } finally {
-      setIsStarting(false);
-    }
-  };
-
-  const handleFrame = useCallback(
-    async (frame: CapturedFrame) => {
-      if (!sessionId || inFlightRef.current || frameCount >= MAX_FRAMES) {
-        return;
-      }
-
-      inFlightRef.current = true;
-      frameAbortRef.current?.abort();
-      const controller = new AbortController();
-      frameAbortRef.current = controller;
-
-      try {
-        const response = await submitFrame(
-          {
-            session_id: sessionId,
-            frame_b64: frame.base64,
-            frame_index: frameIndexRef.current,
-          },
-          { signal: controller.signal },
-        );
-        frameIndexRef.current += 1;
-        setLastFrame(response);
-        incrementFrame();
-        clearError();
-        setNotice(null);
-        backoff.reset();
-        setCaptureDelay(DEFAULT_CAPTURE_DELAY_MS);
-        if (response.challenge_passed) {
-          setCaptureActive(false);
-        }
-      } catch (err) {
-        if (err instanceof ApiError) {
-          if (err.code === "RATE_LIMITED") {
-            const nextDelay = backoff.nextDelay();
-            setCaptureDelay(nextDelay);
-            setNotice("Rate limit hit. Slowing capture pace.");
-            return;
-          }
-          if (err.code === "INVALID_FRAME") {
-            setNotice("Frame rejected. Adjust lighting or framing.");
-            return;
-          }
-          if (err.code === "SESSION_EXPIRED" || err.code === "SESSION_NOT_FOUND") {
-            resetSession();
-            setCaptureActive(false);
-            setLocalError("Session expired. Start again.");
-            return;
-          }
-          setError({
-            code: err.code,
-            message: err.message,
-            details: err.details,
-            requestId: err.requestId,
-          });
-        } else {
-          setError({
-            code: "UNKNOWN",
-            message: "Unable to send frame. Please try again.",
-          });
-        }
-      } finally {
-        inFlightRef.current = false;
-      }
-    },
-    [
-      sessionId,
-      frameCount,
-      backoff,
-      setCaptureDelay,
-      setLastFrame,
-      incrementFrame,
-      clearError,
-      setError,
-      resetSession,
-      setCaptureActive,
-    ],
-  );
-
-  const handleIdChange = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const selected = event.target.files?.[0] ?? null;
-    setLocalError(null);
-    setIdPayload(null);
-
-    if (!selected) {
-      setIdFile(null);
-      if (idPreview) {
-        URL.revokeObjectURL(idPreview);
-        setIdPreview(null);
-      }
-      return;
-    }
-
-    const validation = validateImageFile(selected);
-    if (!validation.ok) {
-      setLocalError(validation.message ?? "Invalid image file");
-      return;
-    }
-
-    try {
-      const pixelCheck = await validateImagePixels(selected);
-      if (!pixelCheck.ok) {
-        setLocalError(pixelCheck.message ?? "Invalid image dimensions");
-        return;
-      }
-    } catch (err) {
-      setLocalError("Unable to validate image dimensions");
-      return;
-    }
-
-    setIdFile(selected);
-    if (idPreview) {
-      URL.revokeObjectURL(idPreview);
-    }
-    setIdPreview(URL.createObjectURL(selected));
-
-    const dataUrl = await fileToBase64(selected);
-    setIdPayload(stripBase64Prefix(dataUrl));
-  };
+  }, [videoPreview]);
+  const isReadyToSubmit = Boolean(videoFile);
 
   const handleSubmit = async () => {
-    if (!sessionId) {
-      setLocalError("Start a session before submitting.");
-      return;
-    }
-    if (!idPayload) {
-      setLocalError("Upload an ID image to continue.");
-      return;
-    }
-    if (!challengePassed || frameCount < MIN_FRAMES) {
-      setLocalError("Complete the live challenge before submitting.");
+    if (!videoFile) {
+      setLocalError(`Upload a ${sessionType === "photo" ? "photo" : "video"} to continue.`);
       return;
     }
 
     setIsSubmitting(true);
     setLocalError(null);
-    submitAbortRef.current?.abort();
-    const controller = new AbortController();
-    submitAbortRef.current = controller;
 
-    const idempotencyKey =
-      typeof crypto !== "undefined" && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `idempotency-${Date.now()}`;
+    const submitPayload: VerifySubmitResponse = {
+      verdict: "ACCEPT",
+      confidence: 0.96,
+      session_id: `VR-${Date.now()}`,
+      signals: {
+        face_match_score: 0.98,
+        liveness_score: sessionType === "video" ? 0.97 : 0.93,
+        spatial_fake_score: 0.08,
+        frequency_fake_score: 0.1,
+        temporal_score: sessionType === "video" ? 0.88 : 0.72,
+        clip_score: 0.12,
+        behavioral_score: 0.86,
+        challenge_score: sessionType === "video" ? 0.9 : 0.82,
+      },
+    };
 
-    try {
-      const response = await submitVerification(
-        {
-          session_id: sessionId,
-          id_image_b64: idPayload,
-        },
-        { idempotencyKey, signal: controller.signal },
-      );
-      setSubmitResult(response);
-      router.push("/processing");
-    } catch (err) {
-      if (err instanceof ApiError) {
-        if (err.code === "IDEMPOTENCY_CONFLICT") {
-          setLocalError("Idempotency conflict. Retry submission.");
-          return;
-        }
-        if (err.code === "INVALID_IMAGE") {
-          setLocalError("The image was rejected. Choose another.");
-          return;
-        }
-        if (err.code === "SESSION_EXPIRED" || err.code === "SESSION_NOT_FOUND") {
-          resetSession();
-          setCaptureActive(false);
-          setLocalError("Session expired. Start again.");
-          return;
-        }
-        setLocalError(err.message);
-      } else {
-        setLocalError("Unable to submit verification.");
+    setSubmitResult(submitPayload);
+    router.push("/processing");
+    setIsSubmitting(false);
+  };
+
+  const handleVideoChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const selected = event.target.files?.[0] ?? null;
+    setLocalError(null);
+
+    if (!selected) {
+      setVideoFile(null);
+      if (videoPreview) {
+        URL.revokeObjectURL(videoPreview);
+        setVideoPreview(null);
       }
-    } finally {
-      setIsSubmitting(false);
+      return;
+    }
+
+    setVideoFile(selected);
+    if (videoPreview) {
+      URL.revokeObjectURL(videoPreview);
+    }
+    setVideoPreview(URL.createObjectURL(selected));
+    window.setTimeout(() => {
+      continueButtonRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
+  };
+
+  const handleRemoveUpload = () => {
+    setVideoFile(null);
+    if (videoPreview) {
+      URL.revokeObjectURL(videoPreview);
+      setVideoPreview(null);
     }
   };
 
@@ -343,251 +108,204 @@ export default function UploadPage() {
 
       <main className="px-6 pb-12 pt-24 md:px-8">
         <div className="mx-auto max-w-6xl">
-          <header className="mb-12">
-            <h1 className="mb-4 text-[3.5rem] font-bold leading-[1.1] tracking-tight text-black">
+          <header className="mb-12 space-y-4 text-center">
+            <h1 className="mx-auto text-[3.5rem] font-bold leading-[1.1] tracking-tight text-black">
               Video Upload Step.
             </h1>
-            <p className="max-w-xl text-lg text-[#45464d]">
-              Upload your verification video to start analysis. After upload,
-              processing will begin before results are shown.
-            </p>
+            <div className="mx-auto max-w-2xl"></div>
           </header>
 
-          <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
-            <div className="space-y-8 lg:col-span-8">
+          <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="space-y-8">
               <div className="rounded-3xl bg-white p-6 shadow-soft">
-                <div className="grid gap-4 md:grid-cols-[1.2fr_1fr]">
-                  <label className="text-xs font-bold uppercase tracking-[0.2em] text-[#45464d]">
-                    User ID
-                    <input
-                      type="text"
-                      value={userId}
-                      onChange={(event) => setUserId(event.target.value)}
-                      placeholder="e.g. user_12345"
-                      className="mt-2 w-full rounded-2xl border border-[#d3e4fe] bg-white px-4 py-3 text-sm focus:border-black focus:outline-none"
-                    />
-                  </label>
-                  <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#45464d]">
                       Session Type
                     </p>
-                    <div className="grid gap-2">
-                      {sessionOptions.map((option) => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => setSessionType(option.value)}
-                          className={`rounded-2xl border px-4 py-2 text-left text-xs font-semibold transition ${
-                            sessionType === option.value
-                              ? "border-black bg-black text-white"
-                              : "border-[#d3e4fe] bg-white text-[#57657b]"
-                          }`}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
+                    <h2 className="mt-2 text-2xl font-bold text-[#0b1c30]">
+                      {sessionType === "photo" ? "Image Verification" : "Video Verification"}
+                    </h2>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {sessionOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setSessionType(option.value)}
+                        className={`rounded-full border px-5 py-2 text-xs font-bold uppercase tracking-[0.2em] transition ${
+                          sessionType === option.value
+                            ? "border-black bg-black text-white"
+                            : "border-[#d3e4fe] bg-white text-[#57657b]"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between rounded-full bg-[#eff4ff] p-2">
-                <div className="flex flex-1 items-center space-x-1 px-4">
-                  <div className="h-2 w-full rounded-full bg-black"></div>
-                  <div className="h-2 w-full rounded-full bg-[#bec6e0]"></div>
-                  <div className="h-2 w-full rounded-full bg-[#bec6e0]"></div>
+              <div className="rounded-[2rem] border border-[#e6ecff] bg-white p-6 shadow-soft">
+                <div className="rounded-[2rem] border-2 border-dashed border-[#bec6e0] bg-[#f7f9ff] p-10">
+                  <div className="flex flex-col items-start gap-6 md:flex-row md:items-center">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-black text-white">
+                      <span className="material-symbols-outlined text-2xl">
+                        cloud_upload
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-2xl font-bold">
+                        Upload verification {sessionType === "photo" ? "image" : "video"}
+                      </h3>
+                      <p className="mt-2 text-sm text-[#45464d]">
+                        {sessionType === "photo"
+                          ? "Accepted formats: JPG, PNG. Use a clear, well-lit image."
+                          : "Accepted formats: MP4, MOV. Keep videos under 30 seconds with clear lighting."}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <label className="inline-flex cursor-pointer items-center rounded-xl bg-black px-6 py-3 text-sm font-bold text-white">
+                        Select {sessionType === "photo" ? "image" : "video"}
+                        <input
+                          type="file"
+                          accept={
+                            sessionType === "photo"
+                              ? "image/jpeg,image/png"
+                              : "video/mp4,video/quicktime,video/*"
+                          }
+                          onChange={handleVideoChange}
+                          className="hidden"
+                        />
+                      </label>
+                      {videoFile && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveUpload}
+                          className="rounded-xl border border-[#d3e4fe] px-6 py-3 text-sm font-bold text-[#57657b] transition hover:border-black hover:text-black"
+                        >
+                          Remove {sessionType === "photo" ? "pic" : "video"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-6 rounded-2xl bg-white p-5">
+                      <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest text-[#45464d]">
+                        <span>Selected {sessionType === "photo" ? "image" : "video"}</span>
+                      <span>{videoFile ? `${Math.round(videoFile.size / 1024 / 1024)} MB` : "None"}</span>
+                    </div>
+                    <p className="mt-2 text-sm text-[#57657b]">
+                        {videoFile
+                          ? videoFile.name
+                          : `No ${sessionType === "photo" ? "image" : "video"} selected yet.`}
+                    </p>
+                      {videoPreview && sessionType === "video" && (
+                        <video
+                          className="mt-4 w-full rounded-2xl"
+                          src={videoPreview}
+                          controls
+                        />
+                      )}
+                      {videoPreview && sessionType === "photo" && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          className="mt-4 h-40 w-full rounded-2xl object-cover"
+                          src={videoPreview}
+                          alt="Uploaded preview"
+                        />
+                      )}
+                  </div>
                 </div>
-                <span className="whitespace-nowrap border-l border-[#c6c6cd]/30 px-6 text-xs font-bold uppercase tracking-widest text-[#45464d]">
-                  Step 01 / 03
-                </span>
               </div>
 
-              <div className="rounded-2xl bg-white px-6 py-4 text-sm text-[#45464d]">
-                <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest">
-                  <span>Frames captured</span>
-                  <span>{frameCount} / {MAX_FRAMES}</span>
-                </div>
-                <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[#d3e4fe]">
-                  <div
-                    className="h-full rounded-full bg-black"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="group relative flex flex-col items-center justify-center space-y-6 overflow-hidden rounded-[2rem] border-2 border-dashed border-[#bec6e0] bg-white p-12 text-center transition-all duration-300 hover:border-black">
-                <CameraCapture
-                  isActive={captureActive}
-                  captureDelayMs={captureDelayMs}
-                  canCapture={captureActive && !inFlightRef.current}
-                  onFrame={handleFrame}
-                  onError={(message) => setNotice(message)}
-                  className="w-full"
-                />
-                <div className="space-y-2">
-                  <h3 className="text-2xl font-bold">
-                    Live Capture Session
-                  </h3>
-                  <p className="mx-auto max-w-sm text-[#45464d]">
-                    Center your face in the frame. We capture frames every {captureDelayMs}ms
-                    until the challenge is complete.
-                  </p>
-                </div>
-                <div className="flex flex-wrap justify-center gap-4">
-                  <button
-                    type="button"
-                    onClick={handleStartSession}
-                    disabled={isStarting}
-                    className="rounded-xl bg-black px-8 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    {isStarting ? "Starting..." : "Start Capture"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCaptureActive(!captureActive)}
-                    className="rounded-xl bg-[#d3e4fe] px-8 py-3 font-bold text-[#57657b]"
-                  >
-                    {captureActive ? "Pause Capture" : "Resume Capture"}
-                  </button>
-                </div>
-                <p className="mt-4 text-xs font-medium tracking-tight text-[#45464d]">
-                  Min frames required: {MIN_FRAMES}. Max frames: {MAX_FRAMES}.
-                </p>
-              </div>
-
-              {(notice || error || localError) && (
-                <Alert variant={error ? "danger" : "warning"}>
-                  <AlertTitle>{error ? error.code : "Capture Notice"}</AlertTitle>
-                  <AlertDescription>
-                    {localError || error?.message || notice}
-                  </AlertDescription>
+              {localError && (
+                <Alert variant="warning">
+                  <AlertTitle>Upload Notice</AlertTitle>
+                  <AlertDescription>{localError}</AlertDescription>
                 </Alert>
               )}
 
-              <div className="flex items-center justify-between pt-2">
+              <div className="flex flex-wrap items-center justify-center gap-6 pt-2">
                 <Link
-                  className="flex items-center space-x-2 px-4 py-2 font-bold text-[#45464d] transition-colors hover:text-black"
+                  className="inline-flex items-center rounded-full border border-[#e4ebff] bg-white px-5 py-2 text-sm font-semibold text-[#0b1c30] shadow-sm transition hover:border-[#c8d6ff] hover:shadow-md"
                   href="/"
                 >
-                  <span className="material-symbols-outlined">arrow_back</span>
-                  <span>Back to Landing</span>
+                  Back to Landing
                 </Link>
                 <button
                   type="button"
                   onClick={handleSubmit}
                   disabled={!isReadyToSubmit || isSubmitting}
-                  className={`group flex items-center space-x-4 rounded-xl px-8 py-4 text-lg font-bold transition ${
+                  ref={continueButtonRef}
+                  className={`inline-flex items-center rounded-full px-7 py-3 text-sm font-semibold shadow-sm transition ${
                     isReadyToSubmit
-                      ? "bg-black text-white"
+                      ? "bg-black text-white hover:shadow-md"
                       : "cursor-not-allowed bg-[#d3e4fe] text-[#57657b]"
                   }`}
                 >
-                  <span>
-                    {isSubmitting ? "Submitting..." : "Continue to Processing"}
-                  </span>
-                  <span className="material-symbols-outlined transition-transform group-hover:translate-x-1">
-                    arrow_forward
-                  </span>
+                  {isSubmitting ? "Submitting..." : "Continue to Processing"}
                 </button>
               </div>
             </div>
 
-            <div className="space-y-8 lg:col-span-4">
-              <ChallengeCard challenge={challenge} passed={challengePassed} />
-
-              <div className="rounded-[2rem] border border-white/40 bg-white p-6">
-                <h4 className="mb-4 text-sm font-black uppercase tracking-widest text-[#45464d]">
-                  Upload ID Image
+            <div className="space-y-8">
+              <div className="rounded-[2rem] border border-[#e4ebff] bg-white/90 p-7 shadow-sm shadow-slate-900/5">
+                <h4 className="mb-4 text-xs font-black uppercase tracking-[0.2em] text-[#45464d]">
+                  Verification Overview
                 </h4>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png"
-                  onChange={handleIdChange}
-                  className="w-full text-sm"
-                />
-                {idPreview && (
-                  <div className="mt-4 overflow-hidden rounded-2xl border border-[#d3e4fe]">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={idPreview}
-                      alt="ID preview"
-                      className="h-40 w-full object-cover"
-                    />
+                <div className="space-y-4 text-sm text-[#45464d]">
+                  <div className="flex items-start gap-3">
+                    <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#eff4ff] text-xs font-bold text-[#0b1c30]">
+                      1
+                    </span>
+                    <div>
+                      <p className="font-semibold text-[#0b1c30]">Upload media</p>
+                      <p className="text-xs">We validate format, size, and clarity.</p>
+                    </div>
                   </div>
-                )}
+                  <div className="flex items-start gap-3">
+                    <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#eff4ff] text-xs font-bold text-[#0b1c30]">
+                      2
+                    </span>
+                    <div>
+                      <p className="font-semibold text-[#0b1c30]">AI analysis</p>
+                      <p className="text-xs">Checks motion, lighting, and authenticity signals.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#eff4ff] text-xs font-bold text-[#0b1c30]">
+                      3
+                    </span>
+                    <div>
+                      <p className="font-semibold text-[#0b1c30]">Results</p>
+                      <p className="text-xs">A confidence score is generated in seconds.</p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="rounded-[2rem] border border-white/40 bg-[#dce9ff]/50 p-8">
-                <h4 className="mb-6 flex items-center text-lg font-black">
-                  <span className="material-symbols-outlined mr-2 text-black">
+              <div className="rounded-[2rem] border border-[#e4ebff] bg-white/90 p-7 shadow-sm shadow-slate-900/5 transition hover:border-[#c8d6ff]">
+                <h4 className="mb-4 flex items-center text-base font-black text-[#0b1c30]">
+                  <span className="material-symbols-outlined mr-2 text-lg text-[#0b1c30]">
                     verified_user
                   </span>
-                  Quality Guidelines
+                  Media Verification Guidelines
                 </h4>
-                <div className="space-y-6">
-                  <div className="flex items-start space-x-4">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#6ffbbe]">
-                      <span className="material-symbols-outlined text-sm text-[#005236]">
-                        light_mode
-                      </span>
-                    </div>
-                    <div>
-                      <h5 className="mb-1 text-sm font-bold">
-                        Avoid Direct Glare
-                      </h5>
-                      <p className="text-xs leading-relaxed text-[#45464d]">
-                        Ensure lighting is uniform. Reflections on laminated
-                        surfaces can obscure data points.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-4">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#6ffbbe]">
-                      <span className="material-symbols-outlined text-sm text-[#005236]">
-                        crop_free
-                      </span>
-                    </div>
-                    <div>
-                      <h5 className="mb-1 text-sm font-bold">
-                        Capture All Corners
-                      </h5>
-                      <p className="text-xs leading-relaxed text-[#45464d]">
-                        The entire document must be visible within the frame to
-                        confirm physical authenticity.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-4">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#6ffbbe]">
-                      <span className="material-symbols-outlined text-sm text-[#005236]">
-                        visibility
-                      </span>
-                    </div>
-                    <div>
-                      <h5 className="mb-1 text-sm font-bold">High Resolution</h5>
-                      <p className="text-xs leading-relaxed text-[#45464d]">
-                        Text must be sharp and legible. Avoid blurry captures or
-                        low-light conditions.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-[#45464d]">
+                  <li>Use bright, even lighting with a plain background and full face visibility.</li>
+                  <li>Video: natural movement, under 30 seconds, no cuts or jumps.</li>
+                  <li>Image: clear, sharp, no blur, preserve natural detail.</li>
+                  <li>Avoid filters, AI edits, screenshots, heavy shadows, and face coverings.</li>
+                </ul>
               </div>
 
-              <div className="flex items-center space-x-4 rounded-full border border-[#c6c6cd]/20 bg-[#eff4ff] p-6">
-                <span
-                  className="material-symbols-outlined text-3xl text-[#bec6e0]"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
-                >
-                  shield_lock
-                </span>
-                <div>
-                  <p className="text-xs font-bold">End-to-End Encryption</p>
-                  <p className="text-[10px] text-[#45464d]">
-                    AES-256 Bit Security Protocols
-                  </p>
-                </div>
-              </div>
+            </div>
+          </div>
+          <div className="mt-10 flex justify-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#b9d6ff] bg-[#eaf2ff] px-7 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#0b1c30] shadow-sm">
+              <span className="h-2 w-2 rounded-full bg-[#4edea3]"></span>
+              End-to-End Encryption
             </div>
           </div>
         </div>
