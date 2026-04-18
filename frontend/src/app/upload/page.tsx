@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -180,24 +180,13 @@ export default function UploadPage() {
 
   return (
     <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] antialiased">
-      <header className="glass fixed top-0 z-50 w-full bg-white/80 shadow-sm shadow-slate-200/50">
-        <div className="mx-auto flex h-16 w-full max-w-screen-2xl items-center justify-between px-6 md:px-8">
-          <div className="text-lg font-black tracking-tighter text-slate-950">
-            VeriRisk AI
-          </div>
-          <nav className="hidden items-center space-x-8 md:flex">
-            <span className="border-b-2 border-slate-950 pb-1 font-semibold">
-              Verification
-            </span>
-            <span className="text-slate-500">Documents</span>
-            <span className="text-slate-500">Reports</span>
+      <header className="fixed top-0 z-50 w-full">
+        <div className="mx-auto flex h-20 w-full max-w-screen-2xl items-center justify-center px-6 md:px-8">
+          <nav className="master-pill-nav" aria-label="Primary navigation">
+            <Link className="master-pill-item" href="/">Home</Link>
+            <Link className="master-pill-item" href="/#quick-start">Quick Start</Link>
+            <Link className="master-pill-item master-pill-upload is-active" href="/upload">Upload</Link>
           </nav>
-          <Link
-            className="rounded-xl bg-black px-4 py-2 text-sm font-bold text-white"
-            href="/results"
-          >
-            Dashboard
-          </Link>
         </div>
       </header>
 
@@ -212,8 +201,8 @@ export default function UploadPage() {
             </p>
           </header>
 
-          <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
-            <div className="space-y-8 lg:col-span-8">
+          <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="space-y-8">
               <div className="rounded-3xl bg-white p-6 shadow-soft">
                 <div className="grid gap-4 md:grid-cols-[1.2fr_1fr]">
                   <label className="text-xs font-bold uppercase tracking-[0.2em] text-[#45464d]">
@@ -311,13 +300,12 @@ export default function UploadPage() {
                 </Alert>
               )}
 
-              <div className="flex items-center justify-between pt-2">
+              <div className="flex flex-wrap items-center justify-center gap-6 pt-2">
                 <Link
-                  className="flex items-center space-x-2 px-4 py-2 font-bold text-[#45464d] transition-colors hover:text-black"
+                  className="inline-flex items-center rounded-full border border-[#e4ebff] bg-white px-5 py-2 text-sm font-semibold text-[#0b1c30] shadow-sm transition hover:border-[#c8d6ff] hover:shadow-md"
                   href="/"
                 >
-                  <span className="material-symbols-outlined">arrow_back</span>
-                  <span>Back to Landing</span>
+                  Back to Landing
                 </Link>
                 <button
                   type="button"
@@ -349,12 +337,12 @@ export default function UploadPage() {
                 </ul>
               </div>
 
-              <div className="rounded-[2rem] border border-white/40 bg-[#dce9ff]/50 p-8">
-                <h4 className="mb-6 flex items-center text-lg font-black">
-                  <span className="material-symbols-outlined mr-2 text-black">
+              <div className="rounded-[2rem] border border-[#e4ebff] bg-white/90 p-7 shadow-sm shadow-slate-900/5 transition hover:border-[#c8d6ff]">
+                <h4 className="mb-4 flex items-center text-base font-black text-[#0b1c30]">
+                  <span className="material-symbols-outlined mr-2 text-lg text-[#0b1c30]">
                     verified_user
                   </span>
-                  Quality Guidelines
+                  Media Verification Guidelines
                 </h4>
                 <div className="space-y-6">
                   <div className="flex items-start space-x-4">
