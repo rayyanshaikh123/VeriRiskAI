@@ -34,7 +34,7 @@ export default function ResultsPage() {
     : 0.95;
 
   return (
-    <div className="min-h-screen bg-[#f8f9ff] px-6 pb-10 pt-24 text-[#0b1c30] md:px-8 md:pt-28">
+    <div className="page-background min-h-screen px-6 pb-10 pt-24 antialiased md:px-8 md:pt-28">
       <header className="fixed left-0 top-0 z-50 w-full">
         <div className="mx-auto flex h-20 w-full max-w-screen-2xl items-center justify-center px-6 md:px-8">
           <nav className="master-pill-nav" aria-label="Primary navigation">
@@ -48,7 +48,7 @@ export default function ResultsPage() {
       <div className="mx-auto max-w-6xl">
         <section className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
-            <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-[#6ffbbe] px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[#005236]">
+            <span className="badge mb-4">
               <span
                 className="material-symbols-outlined text-[14px]"
                 style={{ fontVariationSettings: "'FILL' 1" }}
@@ -57,11 +57,11 @@ export default function ResultsPage() {
               </span>
               System Verified
             </span>
-            <h1 className="text-5xl font-black leading-[1.05] tracking-tight md:text-6xl">
+            <h1 className="text-4xl font-semibold leading-[1.05] tracking-tight text-primary md:text-5xl">
               Verification Outcome
             </h1>
           </div>
-          <div className="text-sm text-[#45464d]">
+          <div className="text-sm text-muted">
             <p className="font-medium">
               Reference: {submitResult ? "UPLOAD-RESULT" : "VR-882-X9"}
             </p>
@@ -70,12 +70,12 @@ export default function ResultsPage() {
         </section>
 
         <section className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-12">
-          <article className="rounded-[2rem] bg-white p-8 shadow-sm lg:col-span-8">
-            <p className="text-sm font-bold uppercase tracking-widest text-[#45464d]">
+          <article className="surface-card p-8 lg:col-span-8">
+            <p className="text-sm font-semibold uppercase tracking-widest text-muted">
               Overall Status
             </p>
             <div className="mt-4 flex items-center gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#6ffbbe] text-[#005236]">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--surface-muted)] text-primary">
                 <span
                   className="material-symbols-outlined text-[40px]"
                   style={{ fontVariationSettings: "'FILL' 1" }}
@@ -84,34 +84,34 @@ export default function ResultsPage() {
                 </span>
               </div>
               <div>
-                <p className="text-4xl font-black tracking-tighter">{verdict}</p>
-                <p className="mt-1 text-sm text-[#45464d]">
+                <p className="text-3xl font-semibold tracking-tight text-primary">{verdict}</p>
+                <p className="mt-1 text-sm text-muted">
                   Identity authenticity confirmed via AI Forensic Engine.
                 </p>
               </div>
             </div>
           </article>
 
-          <article className="flex flex-col justify-between rounded-[2rem] bg-[#131b2e] p-8 text-white lg:col-span-4">
+          <article className="surface-card flex flex-col justify-between p-8 lg:col-span-4">
             <div>
-              <p className="text-sm font-bold uppercase tracking-widest text-[#bec6e0]">
+              <p className="text-sm font-semibold uppercase tracking-widest text-muted">
                 Final Risk Score
               </p>
-              <p className="mt-2 text-6xl font-black tracking-tighter text-[#4edea3]">
+              <p className="mt-2 text-5xl font-semibold tracking-tight text-primary">
                 {riskScore}
-                <span className="text-2xl text-[#bec6e0]">/100</span>
+                <span className="text-2xl text-muted">/100</span>
               </p>
             </div>
-            <div className="mt-6 rounded-xl bg-white/10 p-4">
-              <div className="mb-2 flex items-center justify-between text-xs font-bold">
-                <span className="text-[#bec6e0]">Rating</span>
-                <span className="uppercase tracking-widest text-[#4edea3]">
+            <div className="mt-6 rounded-xl border border-muted/40 bg-[var(--surface-muted)] p-4">
+              <div className="mb-2 flex items-center justify-between text-xs font-semibold">
+                <span className="text-muted">Rating</span>
+                <span className="uppercase tracking-widest text-primary">
                   {rating}
                 </span>
               </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/20">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
                 <div
-                  className="h-full rounded-full bg-[#4edea3]"
+                  className="h-full rounded-full bg-[var(--text)]"
                   style={{ width: `${Math.max(5, riskScore)}%` }}
                 ></div>
               </div>
@@ -120,57 +120,57 @@ export default function ResultsPage() {
         </section>
 
         <section className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
-          <article className="rounded-[1.5rem] bg-[#eff4ff] p-8">
-            <span className="material-symbols-outlined mb-4 text-[#45464d]">
+          <article className="surface-card p-8">
+            <span className="material-symbols-outlined mb-4 text-muted">
               hide_image
             </span>
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#45464d]">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">
               Spatial Score
             </p>
-            <p className="text-4xl font-bold tracking-tight">{percent(1 - spatialScore)}</p>
+            <p className="text-3xl font-semibold tracking-tight text-primary">{percent(1 - spatialScore)}</p>
           </article>
-          <article className="rounded-[1.5rem] bg-[#eff4ff] p-8">
-            <span className="material-symbols-outlined mb-4 text-[#45464d]">
+          <article className="surface-card p-8">
+            <span className="material-symbols-outlined mb-4 text-muted">
               graphic_eq
             </span>
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#45464d]">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">
               Frequency Score
             </p>
-            <p className="text-4xl font-bold tracking-tight">{percent(1 - frequencyScore)}</p>
+            <p className="text-3xl font-semibold tracking-tight text-primary">{percent(1 - frequencyScore)}</p>
           </article>
-          <article className="rounded-[1.5rem] bg-[#eff4ff] p-8">
-            <span className="material-symbols-outlined mb-4 text-[#45464d]">
+          <article className="surface-card p-8">
+            <span className="material-symbols-outlined mb-4 text-muted">
               query_stats
             </span>
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#45464d]">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">
               Forensic Score
             </p>
-            <p className="text-4xl font-bold tracking-tight">{percent(forensic)}</p>
+            <p className="text-3xl font-semibold tracking-tight text-primary">{percent(forensic)}</p>
           </article>
         </section>
 
-        <section className="rounded-[2rem] bg-[#eff4ff] p-8">
-          <h2 className="mb-6 text-2xl font-bold tracking-tight">
+        <section className="surface-card p-8">
+          <h2 className="mb-6 text-2xl font-semibold tracking-tight text-primary">
             Decision Audit Log
           </h2>
-          <div className="space-y-5 text-sm">
+          <div className="space-y-5 text-sm text-primary">
             <div>
-              <p className="font-bold">Oct 24, 14:22:01 - Final Approval Issued</p>
-              <p className="text-[#45464d]">
+              <p className="font-semibold">Oct 24, 14:22:01 - Final Approval Issued</p>
+              <p className="text-muted">
                 System merged biometric data with document OCR and forensic
                 analysis. No red flags detected.
               </p>
             </div>
             <div>
-              <p className="font-bold">Oct 24, 14:21:45 - Forensic Scan Complete</p>
-              <p className="text-[#45464d]">
+              <p className="font-semibold">Oct 24, 14:21:45 - Forensic Scan Complete</p>
+              <p className="text-muted">
                 Micro-pattern analysis confirmed document is genuine and
                 non-digitally altered.
               </p>
             </div>
             <div>
-              <p className="font-bold">Oct 24, 14:21:10 - Human-in-the-loop Status</p>
-              <p className="text-[#45464d]">
+              <p className="font-semibold">Oct 24, 14:21:10 - Human-in-the-loop Status</p>
+              <p className="text-muted">
                 Bypassed. Confidence score exceeds automated threshold (95%).
                 No manual review required.
               </p>
@@ -180,13 +180,13 @@ export default function ResultsPage() {
 
         <div className="mt-10 flex flex-wrap gap-3">
           <Link
-            className="rounded-xl bg-[#d3e4fe] px-6 py-3 text-sm font-bold text-[#57657b]"
+            className="btn-secondary px-6 py-3 text-sm"
             href="/upload"
           >
             Re-run Verification
           </Link>
           <Link
-            className="rounded-xl bg-black px-6 py-3 text-sm font-bold text-white"
+            className="btn-primary px-6 py-3 text-sm"
             href="/"
           >
             Back to Home
