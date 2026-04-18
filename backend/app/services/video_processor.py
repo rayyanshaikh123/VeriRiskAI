@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import tempfile
 from typing import Dict, List
 
@@ -27,6 +28,7 @@ class VideoProcessor:
         self._temporal_detector = temporal_detector
         self._artifact_analyzer = ArtifactAnalyzer()
         self._watermark_detector = WatermarkDetector()
+        self._logger = logging.getLogger("video_processor")
 
     def _extract_frames(self, video_bytes: bytes) -> List[np.ndarray]:
         target_count = max(1, settings.video_frame_sample_count)
@@ -35,6 +37,7 @@ class VideoProcessor:
             temp.flush()
             capture = cv2.VideoCapture(temp.name)
             if not capture.isOpened():
+                self._logger.warning("Video decode failed")
                 return []
 
             frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
@@ -49,6 +52,10 @@ class VideoProcessor:
                 if ok and frame is not None:
                     frames.append(frame)
             capture.release()
+            self._logger.info(
+                "Frame sampling: %s",
+                {"requested": target_count, "extracted": len(frames)},
+            )
         return frames
 
     def _encode_jpeg(self, frame: np.ndarray) -> bytes:
@@ -60,6 +67,7 @@ class VideoProcessor:
     def process(self, video_bytes: bytes) -> Dict[str, float | bool]:
         frames = self._extract_frames(video_bytes)
         if not frames:
+            self._logger.warning("No frames extracted")
             return {
                 "spatial_fake_score": 0.0,
                 "frequency_fake_score": 0.0,
@@ -81,6 +89,9 @@ class VideoProcessor:
             encoded = self._encode_jpeg(resized)
             frame_bytes.append(encoded)
 
+            if not encoded:
+                self._logger.warning("Frame encoding failed")
+
             spatial_scores.append(
                 clamp01(self._spatial_detector.detect(encoded).get("score", 0.0))
             )
@@ -99,6 +110,18 @@ class VideoProcessor:
         frequency_avg = float(np.mean(frequency_scores))
         artifact_avg = float(np.mean(artifact_scores))
         temporal_score = float(self._temporal_detector.detect(frame_bytes).get("score", 0.0))
+
+        self._logger.info(
+            "Signal outputs: %s",
+            {
+                "spatial_fake_score": spatial_avg,
+                "frequency_fake_score": frequency_avg,
+                "temporal_score": temporal_score,
+                "artifact_score": artifact_avg,
+                "artifact_flag": any(artifact_flags),
+                "watermark_detected": any(watermark_flags),
+            },
+        )
 
         return {
             "spatial_fake_score": clamp01(spatial_avg),

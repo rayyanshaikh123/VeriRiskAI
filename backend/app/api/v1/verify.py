@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Request, status
 
 from app.core.config import settings
@@ -35,6 +37,7 @@ _temporal_detector = TemporalDetector()
 _image_processor = ImageProcessor(_face_extractor, _spatial_detector, _frequency_detector)
 _video_processor = VideoProcessor(_spatial_detector, _frequency_detector, _temporal_detector)
 _fusion_engine = FusionEngine()
+_logger = logging.getLogger("verify_pipeline")
 
 
 def _clamp(value: float) -> float:
@@ -43,6 +46,16 @@ def _clamp(value: float) -> float:
 
 @router.post("/upload", response_model=VerifyUploadEnvelope)
 async def upload_verification(request: Request, body: VerifyUploadRequest):
+    expected_keys = {
+        "spatial_fake_score",
+        "frequency_fake_score",
+        "artifact_flag",
+        "artifact_score",
+        "watermark_detected",
+    }
+    if body.input_type == InputType.video:
+        expected_keys.add("temporal_score")
+
     if body.input_type == InputType.image:
         try:
             payload = validate_base64_image(
@@ -76,6 +89,22 @@ async def upload_verification(request: Request, body: VerifyUploadRequest):
             )
             raise_api_error(ErrorCode(exc.error_code), str(exc), status_code)
         raw_signals = _video_processor.process(payload)
+
+    missing = [key for key in expected_keys if key not in raw_signals]
+    if missing:
+        _logger.warning("Missing detector outputs: %s", missing)
+    _logger.info(
+        "Detector outputs: %s",
+        {
+            "input_type": body.input_type.value,
+            "spatial_fake_score": raw_signals.get("spatial_fake_score"),
+            "frequency_fake_score": raw_signals.get("frequency_fake_score"),
+            "temporal_score": raw_signals.get("temporal_score"),
+            "artifact_flag": raw_signals.get("artifact_flag"),
+            "artifact_score": raw_signals.get("artifact_score"),
+            "watermark_detected": raw_signals.get("watermark_detected"),
+        },
+    )
 
     signals = SignalBreakdown(
         spatial_fake_score=_clamp(raw_signals.get("spatial_fake_score", 0.0)),

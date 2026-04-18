@@ -21,6 +21,15 @@ class Settings(BaseModel):
     frequency_anomaly_threshold: float = 0.6
     temporal_inconsistency_threshold: float = 0.6
     fusion_xgb_model_path: str | None = os.getenv("FUSION_XGB_MODEL_PATH")
+    log_level: str = os.getenv("LOG_LEVEL", "INFO")
+    spatial_model_url: str = os.getenv(
+        "SPATIAL_MODEL_URL",
+        "https://huggingface.co/onnx-community/Deep-Fake-Detector-v2-Model-ONNX/resolve/main/onnx/model_int8.onnx?download=true",
+    )
+    spatial_model_path: str = os.getenv(
+        "SPATIAL_MODEL_PATH",
+        "backend/models/deepfake_v2_int8.onnx",
+    )
     cors_allowed_origins: tuple[str, ...] = (
         "http://localhost:3000",
         "http://127.0.0.1:3000",
