@@ -18,6 +18,10 @@ class Settings(BaseModel):
     max_video_upload_bytes: int = 15_000_000
     allowed_video_formats: tuple[str, ...] = ("MP4", "WEBM")
     video_frame_sample_count: int = 12
+    cors_allowed_origins: tuple[str, ...] = (
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    )
 
 
 settings = Settings()
