@@ -1,22 +1,69 @@
+from __future__ import annotations
+
 from typing import Dict, Optional
+
+import numpy as np
+
+from app.core.config import settings
+from app.utils.normalization import clamp01
 
 
 class FusionEngine:
-    def fuse(self, signals: Dict[str, Optional[float]]) -> Dict[str, object]:
-        """Return risk score, verdict, and confidence from signals (stub)."""
-        scores = [
-            float(signals.get("spatial_fake_score", 0.5)),
-            float(signals.get("frequency_fake_score", 0.5)),
-        ]
+    def __init__(self) -> None:
+        self._xgb_model = None
+        if settings.fusion_xgb_model_path:
+            try:
+                import joblib
+
+                self._xgb_model = joblib.load(settings.fusion_xgb_model_path)
+            except Exception:
+                self._xgb_model = None
+
+    def _weighted_score(self, signals: Dict[str, Optional[float]]) -> float:
+        spatial = clamp01(signals.get("spatial_fake_score", 0.0))
+        frequency = clamp01(signals.get("frequency_fake_score", 0.0))
         temporal = signals.get("temporal_score")
-        if temporal is not None:
-            scores.append(float(temporal))
-        risk_score = sum(scores) / len(scores)
+        temporal_score = clamp01(temporal) if temporal is not None else None
+        artifact = clamp01(signals.get("artifact_score", 0.0))
+        watermark = 1.0 if signals.get("watermark_detected") else 0.0
+
+        score = 0.5 * spatial + 0.25 * frequency + 0.05 * artifact + 0.05 * watermark
+        if temporal_score is not None:
+            score += 0.15 * temporal_score
+        return clamp01(score)
+
+    def _model_score(self, signals: Dict[str, Optional[float]]) -> float:
+        if self._xgb_model is None:
+            return self._weighted_score(signals)
+
+        feature_vector = np.array(
+            [
+                clamp01(signals.get("spatial_fake_score", 0.0)),
+                clamp01(signals.get("frequency_fake_score", 0.0)),
+                clamp01(signals.get("temporal_score") or 0.0),
+                clamp01(signals.get("artifact_score", 0.0)),
+                1.0 if signals.get("watermark_detected") else 0.0,
+            ],
+            dtype=np.float32,
+        ).reshape(1, -1)
+        try:
+            proba = self._xgb_model.predict_proba(feature_vector)[0][1]
+            return clamp01(float(proba))
+        except Exception:
+            return self._weighted_score(signals)
+
+    def fuse(self, signals: Dict[str, Optional[float]]) -> Dict[str, object]:
+        """Return risk score, verdict, and confidence from signals."""
+        risk_score = self._model_score(signals)
         if risk_score <= 0.3:
             verdict = "ACCEPT"
         elif risk_score <= 0.6:
             verdict = "REVIEW"
         else:
             verdict = "REJECT"
-        confidence = max(0.0, min(1.0, 1.0 - risk_score))
-        return {"risk_score": risk_score, "verdict": verdict, "confidence": confidence}
+        confidence = clamp01(1.0 - risk_score)
+        return {
+            "risk_score": float(risk_score),
+            "verdict": verdict,
+            "confidence": float(confidence),
+        }
