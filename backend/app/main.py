@@ -1,3 +1,4 @@
+import logging
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Request
@@ -13,6 +14,11 @@ from app.schemas.common import ErrorCode
 from app.utils.response import error_envelope
 
 app = FastAPI(title="VerifyIQ API", version="1.0.0")
+
+logging.basicConfig(
+    level=getattr(logging, settings.log_level.upper(), logging.INFO),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(settings.cors_allowed_origins),

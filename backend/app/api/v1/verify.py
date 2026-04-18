@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Request, status
 
 from app.core.config import settings
@@ -5,6 +7,7 @@ from app.schemas.common import ErrorCode, Verdict
 from app.schemas.verify import (
     InputType,
     SignalBreakdown,
+    SignalFlags,
     VerifyUploadEnvelope,
     VerifyUploadRequest,
     VerifyUploadResponse,
@@ -34,6 +37,7 @@ _temporal_detector = TemporalDetector()
 _image_processor = ImageProcessor(_face_extractor, _spatial_detector, _frequency_detector)
 _video_processor = VideoProcessor(_spatial_detector, _frequency_detector, _temporal_detector)
 _fusion_engine = FusionEngine()
+_logger = logging.getLogger("verify_pipeline")
 
 
 def _clamp(value: float) -> float:
@@ -42,6 +46,16 @@ def _clamp(value: float) -> float:
 
 @router.post("/upload", response_model=VerifyUploadEnvelope)
 async def upload_verification(request: Request, body: VerifyUploadRequest):
+    expected_keys = {
+        "spatial_fake_score",
+        "frequency_fake_score",
+        "artifact_flag",
+        "artifact_score",
+        "watermark_detected",
+    }
+    if body.input_type == InputType.video:
+        expected_keys.add("temporal_score")
+
     if body.input_type == InputType.image:
         try:
             payload = validate_base64_image(
@@ -76,9 +90,25 @@ async def upload_verification(request: Request, body: VerifyUploadRequest):
             raise_api_error(ErrorCode(exc.error_code), str(exc), status_code)
         raw_signals = _video_processor.process(payload)
 
+    missing = [key for key in expected_keys if key not in raw_signals]
+    if missing:
+        _logger.warning("Missing detector outputs: %s", missing)
+    _logger.info(
+        "Detector outputs: %s",
+        {
+            "input_type": body.input_type.value,
+            "spatial_fake_score": raw_signals.get("spatial_fake_score"),
+            "frequency_fake_score": raw_signals.get("frequency_fake_score"),
+            "temporal_score": raw_signals.get("temporal_score"),
+            "artifact_flag": raw_signals.get("artifact_flag"),
+            "artifact_score": raw_signals.get("artifact_score"),
+            "watermark_detected": raw_signals.get("watermark_detected"),
+        },
+    )
+
     signals = SignalBreakdown(
-        spatial_fake_score=_clamp(raw_signals.get("spatial_fake_score", 0.5)),
-        frequency_fake_score=_clamp(raw_signals.get("frequency_fake_score", 0.5)),
+        spatial_fake_score=_clamp(raw_signals.get("spatial_fake_score", 0.0)),
+        frequency_fake_score=_clamp(raw_signals.get("frequency_fake_score", 0.0)),
         temporal_score=(
             _clamp(raw_signals["temporal_score"])
             if raw_signals.get("temporal_score") is not None
@@ -86,7 +116,21 @@ async def upload_verification(request: Request, body: VerifyUploadRequest):
         ),
     )
 
-    fusion_result = _fusion_engine.fuse(signals.model_dump())
+    flags = SignalFlags(
+        artifact_flag=bool(raw_signals.get("artifact_flag", False)),
+        frequency_anomaly=signals.frequency_fake_score > settings.frequency_anomaly_threshold,
+        temporal_inconsistency=(
+            signals.temporal_score is not None
+            and signals.temporal_score > settings.temporal_inconsistency_threshold
+        ),
+        watermark_detected=bool(raw_signals.get("watermark_detected", False)),
+    )
+
+    fusion_payload = signals.model_dump() | {
+        "artifact_score": raw_signals.get("artifact_score", 0.0),
+        "watermark_detected": flags.watermark_detected,
+    }
+    fusion_result = _fusion_engine.fuse(fusion_payload)
     confidence = _clamp(fusion_result.get("confidence", 0.5))
     verdict_value = fusion_result.get("verdict")
     if isinstance(verdict_value, str) and verdict_value in Verdict._value2member_map_:
@@ -98,5 +142,6 @@ async def upload_verification(request: Request, body: VerifyUploadRequest):
         verdict=verdict,
         confidence=confidence,
         signals=signals,
+        flags=flags,
     )
     return success_envelope(request, data)

@@ -17,6 +17,13 @@ class SignalBreakdown(BaseModel):
     temporal_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
 
 
+class SignalFlags(BaseModel):
+    artifact_flag: bool = False
+    frequency_anomaly: bool = False
+    temporal_inconsistency: bool = False
+    watermark_detected: bool = False
+
+
 class VerifyUploadRequest(BaseModel):
     user_id: str
     input_type: InputType
@@ -27,6 +34,7 @@ class VerifyUploadResponse(BaseModel):
     verdict: Verdict
     confidence: float = Field(ge=0.0, le=1.0)
     signals: SignalBreakdown
+    flags: SignalFlags
 
 
 class VerifyUploadEnvelope(ResponseEnvelope):
