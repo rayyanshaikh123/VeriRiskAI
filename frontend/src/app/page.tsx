@@ -1,10 +1,68 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { motion } from "motion/react";
 import Link from "next/link";
-import Threads from "@/components/Threads";
-import SpotlightCard from "@/components/SpotlightCard";
+import ThreadsUntyped from "./components/Threads";
+import SpotlightCardUntyped from "./components/SpotlightCard";
+import BlurTextUntyped from "./components/BlurText";
+
+const Threads = ThreadsUntyped as any;
+const SpotlightCard = SpotlightCardUntyped as any;
+const BlurText = BlurTextUntyped as any;
 
 export default function HomePage() {
+  const [showLoader, setShowLoader] = useState(true);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setShowLoader(false), 3200);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  if (showLoader) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.5, ease: "easeInOut" }}
+        className="flex min-h-screen w-full items-center justify-center bg-black px-4"
+      >
+        <motion.div
+          initial={{ opacity: 0, filter: "blur(18px)", y: 8 }}
+          animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="relative z-10 w-full text-center"
+        >
+          <h2 className="relative mx-auto h-[1.15em] w-[12ch] text-center text-5xl font-extrabold leading-[1.05] text-white md:text-7xl">
+            <motion.span
+              className="absolute inset-0 inline-flex items-center justify-center"
+              initial={{ opacity: 0, filter: "blur(14px)" }}
+              animate={{
+                opacity: [0, 1, 1, 0],
+                filter: ["blur(14px)", "blur(0px)", "blur(0px)", "blur(10px)"]
+              }}
+              transition={{ duration: 1.6, ease: "easeInOut", times: [0, 0.28, 0.72, 1] }}
+            >
+              Introducing
+            </motion.span>
+            <motion.span
+              className="absolute inset-0 inline-flex items-center justify-center"
+              initial={{ opacity: 0, filter: "blur(16px)" }}
+              animate={{
+                opacity: [0, 1, 1, 0],
+                filter: ["blur(16px)", "blur(0px)", "blur(0px)", "blur(12px)"]
+              }}
+              transition={{ duration: 1.6, ease: "easeInOut", delay: 1.55, times: [0, 0.3, 0.72, 1] }}
+            >
+              VeriRisk
+            </motion.span>
+          </h2>
+        </motion.div>
+      </motion.div>
+    );
+  }
+
   return (
     <div className="page-background flex min-h-screen flex-col antialiased">
       <header className="fixed top-0 z-50 w-full">
@@ -41,10 +99,24 @@ export default function HomePage() {
               </span>
               AI Deepfake Defense
             </p>
-            <h1 className="heading-hero mb-5">
-              Know Who's Real.
-              <br />
-              Instantly.
+            <h1 className="heading-hero -mt-2 mb-5 md:-mt-4">
+              <BlurText
+                as="span"
+                className="block justify-center"
+                text="Know Who's Real,"
+                delay={140}
+                animateBy="words"
+                direction="top"
+              />
+              <BlurText
+                as="span"
+                className="block justify-center"
+                text="Instantly."
+                delay={140}
+                animateBy="words"
+                direction="top"
+                rootMargin="0px 0px -8% 0px"
+              />
             </h1>
             <p className="lead mx-auto max-w-2xl">
               Advanced AI detection for secure identity verification across HR and fintech systems.
@@ -124,37 +196,28 @@ export default function HomePage() {
           </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             <article className="surface-card min-h-[240px] p-8 md:p-9">
-              <span className="border-muted mb-4 inline-flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold text-muted">
-                01
-              </span>
-              <span className="material-symbols-outlined mb-5 text-[32px] text-muted">
+              <span className="material-symbols-outlined mb-5 block w-fit text-[32px] text-muted md:mx-auto">
                 upload_file
               </span>
-              <h3 className="text-xl font-semibold text-primary">1. Upload Media</h3>
+              <h3 className="text-xl font-semibold text-primary">Upload Media</h3>
               <p className="mt-3 max-w-[34ch] text-base leading-relaxed text-muted">
                 Submit a selfie image or short video for identity verification. The system securely processes supported formats in real time.
               </p>
             </article>
             <article className="surface-card min-h-[240px] p-8 md:p-9">
-              <span className="border-muted mb-4 inline-flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold text-muted">
-                02
-              </span>
-              <span className="material-symbols-outlined mb-5 text-[32px] text-muted">
+              <span className="material-symbols-outlined mb-5 block w-fit text-[32px] text-muted md:mx-auto">
                 autorenew
               </span>
-              <h3 className="text-xl font-semibold text-primary">2. AI Analysis</h3>
+              <h3 className="text-xl font-semibold text-primary">AI Analysis</h3>
               <p className="mt-3 max-w-[34ch] text-base leading-relaxed text-muted">
                 Multiple AI models analyze spatial artifacts, frequency patterns, and temporal consistency to detect synthetic manipulation.
               </p>
             </article>
             <article className="surface-card min-h-[240px] p-8 md:p-9">
-              <span className="border-muted mb-4 inline-flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold text-muted">
-                03
-              </span>
-              <span className="material-symbols-outlined mb-5 text-[32px] text-muted">
+              <span className="material-symbols-outlined mb-5 block w-fit text-[32px] text-muted md:mx-auto">
                 task_alt
               </span>
-              <h3 className="text-xl font-semibold text-primary">3. Verification Result</h3>
+              <h3 className="text-xl font-semibold text-primary">Verification Result</h3>
               <p className="mt-3 max-w-[34ch] text-base leading-relaxed text-muted">
                 Receive a clear authenticity decision with confidence score and detection insights for informed action.
               </p>
