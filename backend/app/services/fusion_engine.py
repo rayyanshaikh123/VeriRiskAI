@@ -25,16 +25,27 @@ class FusionEngine:
         temporal = signals.get("temporal_score")
         temporal_score = clamp01(temporal) if temporal is not None else None
         artifact = clamp01(signals.get("artifact_score", 0.0))
+        behavioral = signals.get("behavioral_score")
+        behavioral_score = clamp01(behavioral) if behavioral is not None else None
         watermark_score = signals.get("watermark_score")
-        watermark = (
-            clamp01(watermark_score)
-            if watermark_score is not None
-            else 1.0 if signals.get("watermark_detected") else 0.0
-        )
+        if signals.get("watermark_detected"):
+            watermark = clamp01(watermark_score) if watermark_score is not None else 1.0
+        else:
+            watermark = 0.0
 
-        score = 0.5 * spatial + 0.15 * frequency + 0.1 * artifact + 0.1 * watermark
+        weighted: list[tuple[float, float]] = [
+            (spatial, 0.4),
+            (frequency, 0.15),
+            (artifact, 0.1),
+            (watermark, 0.05),
+        ]
         if temporal_score is not None:
-            score += 0.15 * temporal_score
+            weighted.append((temporal_score, 0.15))
+        if behavioral_score is not None:
+            weighted.append((behavioral_score, 0.15))
+
+        total_weight = sum(weight for _, weight in weighted) or 1.0
+        score = sum(value * weight for value, weight in weighted) / total_weight
         return clamp01(score)
 
     def _model_score(self, signals: Dict[str, Optional[float]]) -> float:
@@ -66,9 +77,9 @@ class FusionEngine:
     def fuse(self, signals: Dict[str, Optional[float]]) -> Dict[str, object]:
         """Return risk score, verdict, and confidence from signals."""
         risk_score = self._model_score(signals)
-        if risk_score <= 0.3:
+        if risk_score <= 0.4:
             verdict = "ACCEPT"
-        elif risk_score <= 0.6:
+        elif risk_score <= 0.7:
             verdict = "REVIEW"
         else:
             verdict = "REJECT"
