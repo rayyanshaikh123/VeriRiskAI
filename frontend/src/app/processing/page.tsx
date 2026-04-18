@@ -56,11 +56,11 @@ export default function ProcessingPage() {
           Processing
         </p>
         <h1 className="mt-5 text-4xl font-black tracking-[-0.02em]">
-          Analyzing Uploaded Video
+          Analyzing Uploaded Media
         </h1>
         <p className="mt-3 text-sm text-[#45464d]">
-          Face matching and forensic checks are running. You will be redirected
-          to verification results automatically.
+          Deepfake and artifact checks are running. You will be redirected to
+          verification results automatically.
         </p>
 
         <div className="mt-8 flex justify-center">
@@ -68,8 +68,8 @@ export default function ProcessingPage() {
         </div>
 
         <div className="mt-8 rounded-xl bg-[#eff4ff] px-4 py-3 text-xs text-[#45464d]">
-          Secure pipeline active: biometric extraction, liveness scoring, and
-          anomaly checks in progress.
+          Secure pipeline active: spatial, frequency, and temporal checks in
+          progress.
         </div>
 
         <Link
