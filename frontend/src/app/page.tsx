@@ -3,9 +3,13 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import Link from "next/link";
-import Threads from "../../components/Threads";
-import SpotlightCard from "../../components/SpotlightCard";
-import BlurText from "../../components/BlurText";
+import ThreadsUntyped from "./components/Threads";
+import SpotlightCardUntyped from "./components/SpotlightCard";
+import BlurTextUntyped from "./components/BlurText";
+
+const Threads = ThreadsUntyped as any;
+const SpotlightCard = SpotlightCardUntyped as any;
+const BlurText = BlurTextUntyped as any;
 
 export default function HomePage() {
   const [showLoader, setShowLoader] = useState(true);
