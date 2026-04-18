@@ -12,6 +12,12 @@ class ImageValidationError(ValueError):
         self.error_code = error_code
 
 
+class VideoValidationError(ValueError):
+    def __init__(self, message: str, error_code: str) -> None:
+        super().__init__(message)
+        self.error_code = error_code
+
+
 def validate_image_size(decoded: bytes, max_bytes: int, error_code: str) -> None:
     if len(decoded) > max_bytes:
         raise ImageValidationError("Image payload exceeds size limit", error_code)
@@ -49,4 +55,35 @@ def validate_base64_image(
                 enforce_pixel_limit(image, max_pixels, error_code)
     except UnidentifiedImageError as exc:
         raise ImageValidationError("Invalid image payload", error_code) from exc
+    return decoded
+
+
+def _detect_video_format(decoded: bytes) -> str | None:
+    header = decoded[:32]
+    if len(header) >= 12 and header[4:8] == b"ftyp":
+        return "MP4"
+    if header[:4] == b"\x1a\x45\xdf\xa3":
+        return "WEBM"
+    return None
+
+
+def validate_base64_video(
+    payload: str,
+    max_bytes: int,
+    allowed_formats: Iterable[str],
+    error_code: str,
+) -> bytes:
+    if not payload or not payload.strip():
+        raise VideoValidationError("Video payload is empty", error_code)
+    try:
+        decoded = base64.b64decode(payload, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise VideoValidationError("Invalid base64 payload", error_code) from exc
+    if len(decoded) > max_bytes:
+        raise VideoValidationError("Video payload exceeds size limit", error_code)
+    allowed = {fmt.upper() for fmt in allowed_formats}
+    if allowed:
+        detected = _detect_video_format(decoded)
+        if not detected or detected not in allowed:
+            raise VideoValidationError("Unsupported video format", error_code)
     return decoded

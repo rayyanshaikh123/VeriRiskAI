@@ -1,27 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { CameraCapture, type CapturedFrame } from "@/components/camera";
-import { ChallengeCard } from "@/components/challenge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ApiError, startVerification, submitFrame, submitVerification } from "@/lib/api";
-import { DEFAULT_CAPTURE_DELAY_MS, MAX_FRAMES, MIN_FRAMES } from "@/lib/constants";
-import { useBackoff } from "@/lib/hooks";
+import { ApiError, uploadVerification } from "@/lib/api";
 import {
   stripBase64Prefix,
   validateImageFile,
   validateImagePixels,
+  validateVideoFile,
 } from "@/lib/validators";
 import { useSessionStore } from "@/store/session";
-import type { SessionType } from "@/types/api";
+import type { InputType } from "@/types/api";
 
-const sessionOptions: { label: string; value: SessionType }[] = [
-  { label: "Photo verification", value: "photo" },
-  { label: "Video verification", value: "video" },
+const inputOptions: { label: string; value: InputType }[] = [
+  { label: "Selfie image", value: "image" },
+  { label: "Short video", value: "video" },
 ];
+
+const demoUsers = ["demo_olivia", "demo_raj", "demo_maria"];
 
 async function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -38,97 +37,128 @@ async function fileToBase64(file: File): Promise<string> {
   });
 }
 
+function formatBytes(bytes: number): string {
+  if (!bytes) {
+    return "0 B";
+  }
+  const units = ["B", "KB", "MB", "GB"];
+  const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const value = bytes / Math.pow(1024, exponent);
+  return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[exponent]}`;
+}
+
 export default function UploadPage() {
   const router = useRouter();
-  const startAbortRef = useRef<AbortController | null>(null);
-  const frameAbortRef = useRef<AbortController | null>(null);
-  const submitAbortRef = useRef<AbortController | null>(null);
-  const inFlightRef = useRef(false);
-  const frameIndexRef = useRef(0);
-  const backoff = useBackoff(DEFAULT_CAPTURE_DELAY_MS, 2000);
-
+  const abortRef = useRef<AbortController | null>(null);
   const [userId, setUserId] = useState("");
-  const [sessionType, setSessionType] = useState<SessionType>("photo");
-  const [notice, setNotice] = useState<string | null>(null);
-  const [isStarting, setIsStarting] = useState(false);
+  const [inputType, setInputType] = useState<InputType>("image");
+  const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
-  const [idFile, setIdFile] = useState<File | null>(null);
-  const [idPreview, setIdPreview] = useState<string | null>(null);
-  const [idPayload, setIdPayload] = useState<string | null>(null);
 
-  const {
-    sessionId,
-    challenges,
-    frameCount,
-    lastFrame,
-    captureActive,
-    captureDelayMs,
-    setSession,
-    setCaptureActive,
-    setCaptureDelay,
-    setLastFrame,
-    incrementFrame,
-    setError,
-    clearError,
-    error,
-    resetSession,
-    setSubmitResult,
-  } = useSessionStore();
+  const { setUserInput, setSubmitResult, setError, clearError, error, resetSession } =
+    useSessionStore();
 
   useEffect(() => {
     return () => {
-      startAbortRef.current?.abort();
-      frameAbortRef.current?.abort();
-      submitAbortRef.current?.abort();
-      if (idPreview) {
-        URL.revokeObjectURL(idPreview);
+      abortRef.current?.abort();
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
       }
     };
-  }, [idPreview]);
+  }, [previewUrl]);
 
-  useEffect(() => {
-    if (frameCount >= MAX_FRAMES) {
-      setCaptureActive(false);
-      setNotice("Maximum frame count reached.");
+  const fileMeta = useMemo(() => {
+    if (!file) {
+      return null;
     }
-  }, [frameCount, setCaptureActive]);
+    return {
+      name: file.name,
+      size: formatBytes(file.size),
+    };
+  }, [file]);
 
-  const progress = useMemo(() => {
-    const ratio = Math.min(frameCount / MAX_FRAMES, 1);
-    return Math.round(ratio * 100);
-  }, [frameCount]);
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = event.target.files?.[0] ?? null;
+    setLocalError(null);
 
-  const challenge = challenges[0] ?? null;
-  const challengePassed = lastFrame?.challenge_passed ?? false;
-
-  const isReadyToSubmit =
-    challengePassed && frameCount >= MIN_FRAMES && Boolean(idPayload);
-
-  const handleStartSession = async () => {
-    if (!userId.trim()) {
-      setLocalError("User ID is required to start capture.");
+    if (!selected) {
+      setFile(null);
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+      }
       return;
     }
+
+    if (inputType === "image") {
+      const validation = validateImageFile(selected);
+      if (!validation.ok) {
+        setLocalError(validation.message ?? "Invalid image file");
+        return;
+      }
+      try {
+        const pixelCheck = await validateImagePixels(selected);
+        if (!pixelCheck.ok) {
+          setLocalError(pixelCheck.message ?? "Invalid image dimensions");
+          return;
+        }
+      } catch {
+        setLocalError("Unable to validate image dimensions");
+        return;
+      }
+    } else {
+      const validation = validateVideoFile(selected);
+      if (!validation.ok) {
+        setLocalError(validation.message ?? "Invalid video file");
+        return;
+      }
+    }
+
+    setFile(selected);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    if (inputType === "image") {
+      setPreviewUrl(URL.createObjectURL(selected));
+    } else {
+      setPreviewUrl(null);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!userId.trim()) {
+      setLocalError("User ID is required");
+      return;
+    }
+    if (!file) {
+      setLocalError("Please choose a file to upload");
+      return;
+    }
+
+    setIsSubmitting(true);
     setLocalError(null);
-    setNotice(null);
-    setIsStarting(true);
-    startAbortRef.current?.abort();
+    clearError();
+    abortRef.current?.abort();
     const controller = new AbortController();
-    startAbortRef.current = controller;
+    abortRef.current = controller;
     resetSession();
 
     try {
-      const data = await startVerification(
+      const dataUrl = await fileToBase64(file);
+      const base64 = stripBase64Prefix(dataUrl);
+      const response = await uploadVerification(
         {
           user_id: userId.trim(),
-          session_type: sessionType,
+          input_type: inputType,
+          file: base64,
         },
         { signal: controller.signal },
       );
-      setSession(data.session_id, data.challenges);
-      setCaptureDelay(DEFAULT_CAPTURE_DELAY_MS);
-      setCaptureActive(true);
+      setUserInput(userId.trim(), inputType);
+      setSubmitResult(response);
+      router.push("/processing");
     } catch (err) {
       if (err instanceof ApiError) {
         setError({
@@ -140,189 +170,8 @@ export default function UploadPage() {
       } else {
         setError({
           code: "UNKNOWN",
-          message: "Unable to start a session. Please try again.",
+          message: "Unable to process the upload. Please try again.",
         });
-      }
-    } finally {
-      setIsStarting(false);
-    }
-  };
-
-  const handleFrame = useCallback(
-    async (frame: CapturedFrame) => {
-      if (!sessionId || inFlightRef.current || frameCount >= MAX_FRAMES) {
-        return;
-      }
-
-      inFlightRef.current = true;
-      frameAbortRef.current?.abort();
-      const controller = new AbortController();
-      frameAbortRef.current = controller;
-
-      try {
-        const response = await submitFrame(
-          {
-            session_id: sessionId,
-            frame_b64: frame.base64,
-            frame_index: frameIndexRef.current,
-          },
-          { signal: controller.signal },
-        );
-        frameIndexRef.current += 1;
-        setLastFrame(response);
-        incrementFrame();
-        clearError();
-        setNotice(null);
-        backoff.reset();
-        setCaptureDelay(DEFAULT_CAPTURE_DELAY_MS);
-        if (response.challenge_passed) {
-          setCaptureActive(false);
-        }
-      } catch (err) {
-        if (err instanceof ApiError) {
-          if (err.code === "RATE_LIMITED") {
-            const nextDelay = backoff.nextDelay();
-            setCaptureDelay(nextDelay);
-            setNotice("Rate limit hit. Slowing capture pace.");
-            return;
-          }
-          if (err.code === "INVALID_FRAME") {
-            setNotice("Frame rejected. Adjust lighting or framing.");
-            return;
-          }
-          if (err.code === "SESSION_EXPIRED" || err.code === "SESSION_NOT_FOUND") {
-            resetSession();
-            setCaptureActive(false);
-            setLocalError("Session expired. Start again.");
-            return;
-          }
-          setError({
-            code: err.code,
-            message: err.message,
-            details: err.details,
-            requestId: err.requestId,
-          });
-        } else {
-          setError({
-            code: "UNKNOWN",
-            message: "Unable to send frame. Please try again.",
-          });
-        }
-      } finally {
-        inFlightRef.current = false;
-      }
-    },
-    [
-      sessionId,
-      frameCount,
-      backoff,
-      setCaptureDelay,
-      setLastFrame,
-      incrementFrame,
-      clearError,
-      setError,
-      resetSession,
-      setCaptureActive,
-    ],
-  );
-
-  const handleIdChange = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const selected = event.target.files?.[0] ?? null;
-    setLocalError(null);
-    setIdPayload(null);
-
-    if (!selected) {
-      setIdFile(null);
-      if (idPreview) {
-        URL.revokeObjectURL(idPreview);
-        setIdPreview(null);
-      }
-      return;
-    }
-
-    const validation = validateImageFile(selected);
-    if (!validation.ok) {
-      setLocalError(validation.message ?? "Invalid image file");
-      return;
-    }
-
-    try {
-      const pixelCheck = await validateImagePixels(selected);
-      if (!pixelCheck.ok) {
-        setLocalError(pixelCheck.message ?? "Invalid image dimensions");
-        return;
-      }
-    } catch (err) {
-      setLocalError("Unable to validate image dimensions");
-      return;
-    }
-
-    setIdFile(selected);
-    if (idPreview) {
-      URL.revokeObjectURL(idPreview);
-    }
-    setIdPreview(URL.createObjectURL(selected));
-
-    const dataUrl = await fileToBase64(selected);
-    setIdPayload(stripBase64Prefix(dataUrl));
-  };
-
-  const handleSubmit = async () => {
-    if (!sessionId) {
-      setLocalError("Start a session before submitting.");
-      return;
-    }
-    if (!idPayload) {
-      setLocalError("Upload an ID image to continue.");
-      return;
-    }
-    if (!challengePassed || frameCount < MIN_FRAMES) {
-      setLocalError("Complete the live challenge before submitting.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setLocalError(null);
-    submitAbortRef.current?.abort();
-    const controller = new AbortController();
-    submitAbortRef.current = controller;
-
-    const idempotencyKey =
-      typeof crypto !== "undefined" && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `idempotency-${Date.now()}`;
-
-    try {
-      const response = await submitVerification(
-        {
-          session_id: sessionId,
-          id_image_b64: idPayload,
-        },
-        { idempotencyKey, signal: controller.signal },
-      );
-      setSubmitResult(response);
-      router.push("/processing");
-    } catch (err) {
-      if (err instanceof ApiError) {
-        if (err.code === "IDEMPOTENCY_CONFLICT") {
-          setLocalError("Idempotency conflict. Retry submission.");
-          return;
-        }
-        if (err.code === "INVALID_IMAGE") {
-          setLocalError("The image was rejected. Choose another.");
-          return;
-        }
-        if (err.code === "SESSION_EXPIRED" || err.code === "SESSION_NOT_FOUND") {
-          resetSession();
-          setCaptureActive(false);
-          setLocalError("Session expired. Start again.");
-          return;
-        }
-        setLocalError(err.message);
-      } else {
-        setLocalError("Unable to submit verification.");
       }
     } finally {
       setIsSubmitting(false);
@@ -356,11 +205,10 @@ export default function UploadPage() {
         <div className="mx-auto max-w-6xl">
           <header className="mb-12">
             <h1 className="mb-4 text-[3.5rem] font-bold leading-[1.1] tracking-tight text-black">
-              Video Upload Step.
+              Upload Verification Media.
             </h1>
             <p className="max-w-xl text-lg text-[#45464d]">
-              Upload your verification video to start analysis. After upload,
-              processing will begin before results are shown.
+              Upload a selfie image or short video to trigger offline deepfake analysis.
             </p>
           </header>
 
@@ -377,19 +225,39 @@ export default function UploadPage() {
                       placeholder="e.g. user_12345"
                       className="mt-2 w-full rounded-2xl border border-[#d3e4fe] bg-white px-4 py-3 text-sm focus:border-black focus:outline-none"
                     />
+                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
+                      <span className="text-[#57657b]">Demo:</span>
+                      {demoUsers.map((demo) => (
+                        <button
+                          key={demo}
+                          type="button"
+                          onClick={() => setUserId(demo)}
+                          className="rounded-full border border-[#d3e4fe] bg-[#f4f8ff] px-3 py-1 text-[#2f3a4d] transition hover:border-black"
+                        >
+                          {demo}
+                        </button>
+                      ))}
+                    </div>
                   </label>
                   <div className="space-y-2">
                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#45464d]">
-                      Session Type
+                      Input type
                     </p>
                     <div className="grid gap-2">
-                      {sessionOptions.map((option) => (
+                      {inputOptions.map((option) => (
                         <button
                           key={option.value}
                           type="button"
-                          onClick={() => setSessionType(option.value)}
+                          onClick={() => {
+                            setInputType(option.value);
+                            setFile(null);
+                            if (previewUrl) {
+                              URL.revokeObjectURL(previewUrl);
+                              setPreviewUrl(null);
+                            }
+                          }}
                           className={`rounded-2xl border px-4 py-2 text-left text-xs font-semibold transition ${
-                            sessionType === option.value
+                            inputType === option.value
                               ? "border-black bg-black text-white"
                               : "border-[#d3e4fe] bg-white text-[#57657b]"
                           }`}
@@ -402,76 +270,44 @@ export default function UploadPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between rounded-full bg-[#eff4ff] p-2">
-                <div className="flex flex-1 items-center space-x-1 px-4">
-                  <div className="h-2 w-full rounded-full bg-black"></div>
-                  <div className="h-2 w-full rounded-full bg-[#bec6e0]"></div>
-                  <div className="h-2 w-full rounded-full bg-[#bec6e0]"></div>
-                </div>
-                <span className="whitespace-nowrap border-l border-[#c6c6cd]/30 px-6 text-xs font-bold uppercase tracking-widest text-[#45464d]">
-                  Step 01 / 03
-                </span>
-              </div>
-
-              <div className="rounded-2xl bg-white px-6 py-4 text-sm text-[#45464d]">
-                <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest">
-                  <span>Frames captured</span>
-                  <span>{frameCount} / {MAX_FRAMES}</span>
-                </div>
-                <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[#d3e4fe]">
-                  <div
-                    className="h-full rounded-full bg-black"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="group relative flex flex-col items-center justify-center space-y-6 overflow-hidden rounded-[2rem] border-2 border-dashed border-[#bec6e0] bg-white p-12 text-center transition-all duration-300 hover:border-black">
-                <CameraCapture
-                  isActive={captureActive}
-                  captureDelayMs={captureDelayMs}
-                  canCapture={captureActive && !inFlightRef.current}
-                  onFrame={handleFrame}
-                  onError={(message) => setNotice(message)}
-                  className="w-full"
+              <div className="rounded-[2rem] border border-white/40 bg-white p-6">
+                <h4 className="mb-4 text-sm font-black uppercase tracking-widest text-[#45464d]">
+                  Upload media
+                </h4>
+                <input
+                  type="file"
+                  accept={
+                    inputType === "image"
+                      ? "image/jpeg,image/png"
+                      : "video/mp4,video/webm,video/quicktime"
+                  }
+                  onChange={handleFileChange}
+                  className="w-full text-sm"
                 />
-                <div className="space-y-2">
-                  <h3 className="text-2xl font-bold">
-                    Live Capture Session
-                  </h3>
-                  <p className="mx-auto max-w-sm text-[#45464d]">
-                    Center your face in the frame. We capture frames every {captureDelayMs}ms
-                    until the challenge is complete.
-                  </p>
-                </div>
-                <div className="flex flex-wrap justify-center gap-4">
-                  <button
-                    type="button"
-                    onClick={handleStartSession}
-                    disabled={isStarting}
-                    className="rounded-xl bg-black px-8 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    {isStarting ? "Starting..." : "Start Capture"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCaptureActive(!captureActive)}
-                    className="rounded-xl bg-[#d3e4fe] px-8 py-3 font-bold text-[#57657b]"
-                  >
-                    {captureActive ? "Pause Capture" : "Resume Capture"}
-                  </button>
-                </div>
-                <p className="mt-4 text-xs font-medium tracking-tight text-[#45464d]">
-                  Min frames required: {MIN_FRAMES}. Max frames: {MAX_FRAMES}.
-                </p>
+
+                {previewUrl && (
+                  <div className="mt-4 overflow-hidden rounded-2xl border border-[#d3e4fe]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={previewUrl}
+                      alt="Selfie preview"
+                      className="h-40 w-full object-cover"
+                    />
+                  </div>
+                )}
+
+                {fileMeta && !previewUrl && (
+                  <div className="mt-4 rounded-2xl border border-dashed border-[#c6c6cd] p-4 text-sm text-[#45464d]">
+                    <div className="font-semibold text-[#0b1c30]">{fileMeta.name}</div>
+                    <div className="text-xs">{fileMeta.size}</div>
+                  </div>
+                )}
               </div>
 
-              {(notice || error || localError) && (
-                <Alert variant={error ? "danger" : "warning"}>
-                  <AlertTitle>{error ? error.code : "Capture Notice"}</AlertTitle>
-                  <AlertDescription>
-                    {localError || error?.message || notice}
-                  </AlertDescription>
+              {(localError || error) && (
+                <Alert variant="danger">
+                  <AlertTitle>{error ? error.code : "Upload error"}</AlertTitle>
+                  <AlertDescription>{error ? error.message : localError}</AlertDescription>
                 </Alert>
               )}
 
@@ -486,16 +322,14 @@ export default function UploadPage() {
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  disabled={!isReadyToSubmit || isSubmitting}
+                  disabled={isSubmitting}
                   className={`group flex items-center space-x-4 rounded-xl px-8 py-4 text-lg font-bold transition ${
-                    isReadyToSubmit
-                      ? "bg-black text-white"
-                      : "cursor-not-allowed bg-[#d3e4fe] text-[#57657b]"
+                    isSubmitting
+                      ? "cursor-not-allowed bg-[#d3e4fe] text-[#57657b]"
+                      : "bg-black text-white"
                   }`}
                 >
-                  <span>
-                    {isSubmitting ? "Submitting..." : "Continue to Processing"}
-                  </span>
+                  <span>{isSubmitting ? "Uploading..." : "Continue to Processing"}</span>
                   <span className="material-symbols-outlined transition-transform group-hover:translate-x-1">
                     arrow_forward
                   </span>
@@ -504,28 +338,15 @@ export default function UploadPage() {
             </div>
 
             <div className="space-y-8 lg:col-span-4">
-              <ChallengeCard challenge={challenge} passed={challengePassed} />
-
               <div className="rounded-[2rem] border border-white/40 bg-white p-6">
                 <h4 className="mb-4 text-sm font-black uppercase tracking-widest text-[#45464d]">
-                  Upload ID Image
+                  Upload checklist
                 </h4>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png"
-                  onChange={handleIdChange}
-                  className="w-full text-sm"
-                />
-                {idPreview && (
-                  <div className="mt-4 overflow-hidden rounded-2xl border border-[#d3e4fe]">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={idPreview}
-                      alt="ID preview"
-                      className="h-40 w-full object-cover"
-                    />
-                  </div>
-                )}
+                <ul className="space-y-2 text-xs text-[#45464d]">
+                  <li>Single selfie image or short video only.</li>
+                  <li>JPEG/PNG for images, MP4/WEBM for video.</li>
+                  <li>Keep lighting even and avoid motion blur.</li>
+                </ul>
               </div>
 
               <div className="rounded-[2rem] border border-white/40 bg-[#dce9ff]/50 p-8">
@@ -543,60 +364,38 @@ export default function UploadPage() {
                       </span>
                     </div>
                     <div>
-                      <h5 className="mb-1 text-sm font-bold">
-                        Avoid Direct Glare
-                      </h5>
+                      <h5 className="mb-1 text-sm font-bold">Avoid Direct Glare</h5>
                       <p className="text-xs leading-relaxed text-[#45464d]">
-                        Ensure lighting is uniform. Reflections on laminated
-                        surfaces can obscure data points.
+                        Ensure lighting is uniform and your face is fully visible.
                       </p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-4">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#6ffbbe]">
-                      <span className="material-symbols-outlined text-sm text-[#005236]">
-                        crop_free
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#ffd36f]">
+                      <span className="material-symbols-outlined text-sm text-[#7a4f00]">
+                        crop
                       </span>
                     </div>
                     <div>
-                      <h5 className="mb-1 text-sm font-bold">
-                        Capture All Corners
-                      </h5>
+                      <h5 className="mb-1 text-sm font-bold">Keep In Frame</h5>
                       <p className="text-xs leading-relaxed text-[#45464d]">
-                        The entire document must be visible within the frame to
-                        confirm physical authenticity.
+                        Avoid cropped foreheads or chins for best detection quality.
                       </p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-4">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#6ffbbe]">
-                      <span className="material-symbols-outlined text-sm text-[#005236]">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#cddcff]">
+                      <span className="material-symbols-outlined text-sm text-[#233b72]">
                         visibility
                       </span>
                     </div>
                     <div>
-                      <h5 className="mb-1 text-sm font-bold">High Resolution</h5>
+                      <h5 className="mb-1 text-sm font-bold">Readable Detail</h5>
                       <p className="text-xs leading-relaxed text-[#45464d]">
-                        Text must be sharp and legible. Avoid blurry captures or
-                        low-light conditions.
+                        Higher resolution improves frequency and artifact analysis.
                       </p>
                     </div>
                   </div>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-4 rounded-full border border-[#c6c6cd]/20 bg-[#eff4ff] p-6">
-                <span
-                  className="material-symbols-outlined text-3xl text-[#bec6e0]"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
-                >
-                  shield_lock
-                </span>
-                <div>
-                  <p className="text-xs font-bold">End-to-End Encryption</p>
-                  <p className="text-[10px] text-[#45464d]">
-                    AES-256 Bit Security Protocols
-                  </p>
                 </div>
               </div>
             </div>

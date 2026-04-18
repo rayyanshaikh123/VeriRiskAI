@@ -40,7 +40,7 @@ export default function KycResultPage() {
     );
   }
 
-  const { verdict, confidence, signals, heatmap } = submitResult;
+  const { verdict, confidence, signals } = submitResult;
 
   return (
     <main className="hero-background min-h-screen px-6 py-12">
@@ -71,10 +71,10 @@ export default function KycResultPage() {
             </div>
             <div className="rounded-2xl bg-[#eff4ff] p-6">
               <p className="text-xs font-bold uppercase tracking-widest text-[#45464d]">
-                Session
+                Input
               </p>
               <p className="mt-2 text-sm font-semibold text-[#0b1c30]">
-                {submitResult.session_id}
+                Offline batch verification
               </p>
             </div>
           </div>
@@ -84,14 +84,6 @@ export default function KycResultPage() {
           <div className="rounded-3xl bg-white p-8 shadow-soft">
             <h2 className="text-lg font-bold">Signal breakdown</h2>
             <div className="mt-4 grid gap-3 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-[#45464d]">Face match</span>
-                <span className="font-semibold text-black">{percent(signals.face_match_score)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[#45464d]">Liveness</span>
-                <span className="font-semibold text-black">{percent(signals.liveness_score)}</span>
-              </div>
               <div className="flex items-center justify-between">
                 <span className="text-[#45464d]">Spatial score</span>
                 <span className="font-semibold text-black">{percent(signals.spatial_fake_score)}</span>
@@ -108,40 +100,17 @@ export default function KycResultPage() {
                     : "--"}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[#45464d]">Clip score</span>
-                <span className="font-semibold text-black">{percent(signals.clip_score)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[#45464d]">Behavioral score</span>
-                <span className="font-semibold text-black">{percent(signals.behavioral_score)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[#45464d]">Challenge score</span>
-                <span className="font-semibold text-black">{percent(signals.challenge_score)}</span>
-              </div>
             </div>
           </div>
 
           <div className="rounded-3xl bg-white p-8 shadow-soft">
             <h2 className="text-lg font-bold">Explainability</h2>
             <p className="mt-2 text-sm text-[#45464d]">
-              Heatmap artifacts are provided when available.
+              Batch processing focuses on aggregate artifacts and signal patterns.
             </p>
-            {heatmap?.url ? (
-              <div className="mt-4 overflow-hidden rounded-2xl border border-[#d3e4fe]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={heatmap.url}
-                  alt="Heatmap"
-                  className="h-64 w-full object-cover"
-                />
-              </div>
-            ) : (
-              <div className="mt-6 rounded-2xl border border-dashed border-[#c6c6cd] p-6 text-sm text-[#45464d]">
-                No heatmap available for this session.
-              </div>
-            )}
+            <div className="mt-6 rounded-2xl border border-dashed border-[#c6c6cd] p-6 text-sm text-[#45464d]">
+              Heatmaps are not generated for upload-only verification.
+            </div>
           </div>
         </section>
 
@@ -151,7 +120,7 @@ export default function KycResultPage() {
             onClick={() => resetSession()}
             className="rounded-xl bg-black px-6 py-3 text-sm font-bold text-white"
           >
-            Start New Session
+            Start New Upload
           </Link>
           <Link
             href="/"

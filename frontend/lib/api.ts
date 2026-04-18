@@ -1,12 +1,8 @@
 import type {
   ErrorCode,
   ResponseEnvelope,
-  VerifyFrameRequest,
-  VerifyFrameResponse,
-  VerifyStartRequest,
-  VerifyStartResponse,
-  VerifySubmitRequest,
-  VerifySubmitResponse,
+  VerifyUploadRequest,
+  VerifyUploadResponse,
 } from "@/types/api";
 
 type RequestOptions = {
@@ -14,10 +10,6 @@ type RequestOptions = {
   token?: string;
   baseUrl?: string;
   headers?: Record<string, string>;
-};
-
-type SubmitOptions = RequestOptions & {
-  idempotencyKey: string;
 };
 
 export class ApiError extends Error {
@@ -123,55 +115,15 @@ async function request<T>(
   return parseEnvelope<T>(response);
 }
 
-export async function startVerification(
-  payload: VerifyStartRequest,
+export async function uploadVerification(
+  payload: VerifyUploadRequest,
   options?: RequestOptions,
-): Promise<VerifyStartResponse> {
-  const envelope = await request<VerifyStartResponse>(
-    "/v1/verify/start",
+): Promise<VerifyUploadResponse> {
+  const envelope = await request<VerifyUploadResponse>(
+    "/v1/verify/upload",
     {
       method: "POST",
       body: JSON.stringify(payload),
-    },
-    options,
-  );
-  if (!envelope.data) {
-    throw new ApiError("Missing data in response", 200, "UNKNOWN");
-  }
-  return envelope.data;
-}
-
-export async function submitFrame(
-  payload: VerifyFrameRequest,
-  options?: RequestOptions,
-): Promise<VerifyFrameResponse> {
-  const envelope = await request<VerifyFrameResponse>(
-    "/v1/verify/frame",
-    {
-      method: "POST",
-      body: JSON.stringify(payload),
-    },
-    options,
-  );
-  if (!envelope.data) {
-    throw new ApiError("Missing data in response", 200, "UNKNOWN");
-  }
-  return envelope.data;
-}
-
-export async function submitVerification(
-  payload: VerifySubmitRequest,
-  options: SubmitOptions,
-): Promise<VerifySubmitResponse> {
-  const headers = buildHeaders(options);
-  headers.set("Idempotency-Key", options.idempotencyKey);
-
-  const envelope = await request<VerifySubmitResponse>(
-    "/v1/verify/submit",
-    {
-      method: "POST",
-      body: JSON.stringify(payload),
-      headers,
     },
     options,
   );
