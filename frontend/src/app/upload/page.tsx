@@ -244,88 +244,87 @@ export default function UploadPage() {
 
         <main className="px-6 pb-16 pt-28 text-[15px] md:px-8">
           <div className="mx-auto max-w-6xl">
-          <header className="mb-12 text-center">
-            <h1 className="mb-3 text-3xl font-semibold leading-tight tracking-tight text-primary md:text-5xl">
-              Submit Verification Media
-            </h1>
-            <p className="mx-auto max-w-xl text-base text-muted md:text-lg">
-              Upload a selfie image or short video to initiate AI-based deepfake detection and
-              authenticity analysis.
-            </p>
-          </header>
+            <header className="mb-12 text-center">
+              <h1 className="mb-3 text-3xl font-semibold leading-tight tracking-tight text-primary md:text-5xl">
+                Submit Verification Media
+              </h1>
+              <p className="mx-auto max-w-xl text-base text-muted md:text-lg">
+                Upload a selfie image or short video to initiate AI-based deepfake detection and
+                authenticity analysis.
+              </p>
+            </header>
 
-          <div className="grid grid-cols-1 items-start gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:justify-center">
-            <div className="space-y-8">
-              <div className="grid gap-8">
-                <div className="space-y-8">
-                  <MagicBento
-                    enableSpotlight={false}
-                    enableStars={false}
-                    enableTilt={false}
-                    enableMagnetism={false}
-                    clickEffect={false}
-                    textAutoHide={false}
-                    enableBorderGlow
-                    gridClassName="space-y-6 bento-section"
-                    cardClassName="magic-bento-card--free"
-                  >
-                    <div className="surface-card p-7">
-                      <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-                        User ID
-                        <input
-                          type="text"
-                          value={userId}
-                          onChange={(event) => setUserId(event.target.value)}
-                          placeholder="e.g. user_12345"
-                          className="mt-2 w-full rounded-lg border border-muted bg-[var(--surface)] px-4 py-3 text-sm text-primary focus:border-[var(--text)] focus:outline-none"
-                        />
-                        <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
-                          <span className="text-muted">Demo:</span>
-                          {demoUsers.map((demo) => (
+            <div className="grid grid-cols-1 items-start gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:justify-center">
+              <div className="space-y-8">
+                <div className="grid gap-8">
+                  <div className="space-y-8">
+                    <MagicBento
+                      enableSpotlight={false}
+                      enableStars={false}
+                      enableTilt={false}
+                      enableMagnetism={false}
+                      clickEffect={false}
+                      textAutoHide={false}
+                      enableBorderGlow
+                      gridClassName="space-y-6 bento-section"
+                      cardClassName="magic-bento-card--free"
+                    >
+                      <div className="surface-card p-7">
+                        <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+                          User ID
+                          <input
+                            type="text"
+                            value={userId}
+                            onChange={(event) => setUserId(event.target.value)}
+                            placeholder="e.g. user_12345"
+                            className="mt-2 w-full rounded-lg border border-muted bg-[var(--surface)] px-4 py-3 text-sm text-primary focus:border-[var(--text)] focus:outline-none"
+                          />
+                          <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
+                            <span className="text-muted">Demo:</span>
+                            {demoUsers.map((demo) => (
+                              <button
+                                key={demo}
+                                type="button"
+                                onClick={() => setUserId(demo)}
+                                className="rounded-full border border-muted bg-[var(--surface)] px-3 py-1 text-primary transition hover:border-[var(--text)]"
+                              >
+                                {demo}
+                              </button>
+                            ))}
+                          </div>
+                        </label>
+                      </div>
+
+                      <div className="surface-card border border-[rgba(226,232,240,0.6)] bg-white/90 p-7 shadow-soft">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#57657b]">
+                          Input type
+                        </p>
+                        <p className="mt-2 text-sm text-[#57657b]">
+                          Choose the primary input to guide the verification pipeline.
+                        </p>
+                        <div className="mt-5 grid gap-3">
+                          {inputOptions.map((option) => (
                             <button
-                              key={demo}
+                              key={option.value}
                               type="button"
-                              onClick={() => setUserId(demo)}
-                              className="rounded-full border border-muted bg-[var(--surface)] px-3 py-1 text-primary transition hover:border-[var(--text)]"
+                              onClick={() => {
+                                setInputType(option.value);
+                                setFile(null);
+                                if (previewUrl) {
+                                  URL.revokeObjectURL(previewUrl);
+                                  setPreviewUrl(null);
+                                }
+                              }}
+                              className={`group flex w-full items-center justify-between rounded-2xl border px-5 py-4 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9dc1ff]/60 ${inputType === option.value
+                                  ? "border-white bg-white text-[#0b1c30] shadow-soft"
+                                  : "border-[#1c2d4a] bg-[#0f1c33] text-[#e2e8f0] hover:border-[#9dc1ff]"
+                                }`}
                             >
-                              {demo}
+                              <span>{option.label}</span>
                             </button>
                           ))}
                         </div>
-                      </label>
-                    </div>
-
-                    <div className="surface-card border border-[rgba(226,232,240,0.6)] bg-white/90 p-7 shadow-soft">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#57657b]">
-                        Input type
-                      </p>
-                      <p className="mt-2 text-sm text-[#57657b]">
-                        Choose the primary input to guide the verification pipeline.
-                      </p>
-                      <div className="mt-5 grid gap-3">
-                        {inputOptions.map((option) => (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => {
-                              setInputType(option.value);
-                              setFile(null);
-                              if (previewUrl) {
-                                URL.revokeObjectURL(previewUrl);
-                                setPreviewUrl(null);
-                              }
-                            }}
-                            className={`group flex w-full items-center justify-between rounded-2xl border px-5 py-4 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9dc1ff]/60 ${
-                              inputType === option.value
-                                ? "border-white bg-white text-[#0b1c30] shadow-soft"
-                                : "border-[#1c2d4a] bg-[#0f1c33] text-[#e2e8f0] hover:border-[#9dc1ff]"
-                            }`}
-                          >
-                            <span>{option.label}</span>
-                          </button>
-                        ))}
                       </div>
-                    </div>
                   </MagicBento>
                 </div>
 
@@ -342,59 +341,59 @@ export default function UploadPage() {
                     cardClassName="magic-bento-card--free"
                   >
                     <div className="surface-card mx-auto w-full max-w-[560px] p-7">
-                    <h4 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-                      Upload media
-                    </h4>
-                    <label className="flex min-h-[190px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-muted bg-[var(--surface)] px-8 py-10 text-center text-sm text-muted transition hover:border-[var(--text)]">
-                      <span className="text-base font-semibold text-primary">
-                        Choose {inputType === "image" ? "a selfie image" : "a short video"}
-                      </span>
-                      <span className="text-xs text-muted">
-                        {inputType === "image"
-                          ? "JPEG/PNG up to 2MB."
-                          : "MP4/WEBM/QuickTime up to 15MB."}
-                      </span>
-                      <input
-                        type="file"
-                        accept={
-                          inputType === "image"
-                            ? "image/jpeg,image/png"
-                            : "video/mp4,video/webm,video/quicktime"
-                        }
-                        onChange={handleFileChange}
-                        className="sr-only"
-                      />
-                    </label>
-
-                    {file && (
-                      <div className="mt-4 flex justify-end">
-                        <button
-                          type="button"
-                          onClick={handleRemoveUpload}
-                          className="rounded-full border border-muted bg-[var(--surface)] px-4 py-2 text-xs font-semibold text-muted transition hover:border-[var(--text)]"
-                        >
-                          Remove {inputType === "image" ? "pic" : "video"}
-                        </button>
-                      </div>
-                    )}
-
-                    {previewUrl && (
-                      <div className="mt-4 rounded-lg border border-muted bg-[var(--surface)] p-3">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={previewUrl}
-                          alt="Selfie preview"
-                          className="max-h-72 w-full object-contain"
+                      <h4 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+                        Upload media
+                      </h4>
+                      <label className="flex min-h-[190px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-muted bg-[var(--surface)] px-8 py-10 text-center text-sm text-muted transition hover:border-[var(--text)]">
+                        <span className="text-base font-semibold text-primary">
+                          Choose {inputType === "image" ? "a selfie image" : "a short video"}
+                        </span>
+                        <span className="text-xs text-muted">
+                          {inputType === "image"
+                            ? "JPEG/PNG up to 2MB."
+                            : "MP4/WEBM/QuickTime up to 15MB."}
+                        </span>
+                        <input
+                          type="file"
+                          accept={
+                            inputType === "image"
+                              ? "image/jpeg,image/png"
+                              : "video/mp4,video/webm,video/quicktime"
+                          }
+                          onChange={handleFileChange}
+                          className="sr-only"
                         />
-                      </div>
-                    )}
+                      </label>
 
-                    {fileMeta && !previewUrl && (
-                      <div className="mt-4 rounded-lg border border-dashed border-muted p-4 text-sm text-muted">
-                        <div className="font-semibold text-primary">{fileMeta.name}</div>
-                        <div className="text-xs text-muted">{fileMeta.size}</div>
-                      </div>
-                    )}
+                      {file && (
+                        <div className="mt-4 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={handleRemoveUpload}
+                            className="rounded-full border border-muted bg-[var(--surface)] px-4 py-2 text-xs font-semibold text-muted transition hover:border-[var(--text)]"
+                          >
+                            Remove {inputType === "image" ? "pic" : "video"}
+                          </button>
+                        </div>
+                      )}
+
+                      {previewUrl && (
+                        <div className="mt-4 rounded-lg border border-muted bg-[var(--surface)] p-3">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={previewUrl}
+                            alt="Selfie preview"
+                            className="max-h-72 w-full object-contain"
+                          />
+                        </div>
+                      )}
+
+                      {fileMeta && !previewUrl && (
+                        <div className="mt-4 rounded-lg border border-dashed border-muted p-4 text-sm text-muted">
+                          <div className="font-semibold text-primary">{fileMeta.name}</div>
+                          <div className="text-xs text-muted">{fileMeta.size}</div>
+                        </div>
+                      )}
                     </div>
                   </MagicBento>
                 </div>
@@ -418,11 +417,10 @@ export default function UploadPage() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  className={`btn-primary group w-full px-8 py-4 text-base sm:w-auto ${
-                    isSubmitting
-                      ? "cursor-not-allowed bg-slate-200 text-slate-500"
-                      : "bg-slate-900 text-white"
-                  }`}
+                  className={`btn-primary group w-full px-8 py-4 text-base sm:w-auto ${isSubmitting
+                    ? "cursor-not-allowed bg-slate-200 text-slate-500"
+                    : "bg-slate-900 text-white"
+                    }`}
                 >
                   <span>{isSubmitting ? "Uploading..." : "Continue to Processing"}</span>
                 </button>
@@ -536,13 +534,12 @@ export default function UploadPage() {
                       <li key={item.label} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span
-                            className={`material-symbols-outlined text-sm ${
-                              item.state === "ok"
+                            className={`material-symbols-outlined text-sm ${item.state === "ok"
                                 ? "text-[#4edea3]"
                                 : item.state === "warn"
                                   ? "text-[#f59e0b]"
                                   : "text-[#94a3b8]"
-                            } ${item.state === "waiting" ? "animate-pulse" : ""}`}
+                              } ${item.state === "waiting" ? "animate-pulse" : ""}`}
                           >
                             {item.state === "ok"
                               ? "check_circle"
