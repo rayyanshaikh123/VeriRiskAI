@@ -5,6 +5,7 @@ from app.schemas.common import ErrorCode, Verdict
 from app.schemas.verify import (
     InputType,
     SignalBreakdown,
+    SignalFlags,
     VerifyUploadEnvelope,
     VerifyUploadRequest,
     VerifyUploadResponse,
@@ -77,8 +78,8 @@ async def upload_verification(request: Request, body: VerifyUploadRequest):
         raw_signals = _video_processor.process(payload)
 
     signals = SignalBreakdown(
-        spatial_fake_score=_clamp(raw_signals.get("spatial_fake_score", 0.5)),
-        frequency_fake_score=_clamp(raw_signals.get("frequency_fake_score", 0.5)),
+        spatial_fake_score=_clamp(raw_signals.get("spatial_fake_score", 0.0)),
+        frequency_fake_score=_clamp(raw_signals.get("frequency_fake_score", 0.0)),
         temporal_score=(
             _clamp(raw_signals["temporal_score"])
             if raw_signals.get("temporal_score") is not None
@@ -86,7 +87,21 @@ async def upload_verification(request: Request, body: VerifyUploadRequest):
         ),
     )
 
-    fusion_result = _fusion_engine.fuse(signals.model_dump())
+    flags = SignalFlags(
+        artifact_flag=bool(raw_signals.get("artifact_flag", False)),
+        frequency_anomaly=signals.frequency_fake_score > settings.frequency_anomaly_threshold,
+        temporal_inconsistency=(
+            signals.temporal_score is not None
+            and signals.temporal_score > settings.temporal_inconsistency_threshold
+        ),
+        watermark_detected=bool(raw_signals.get("watermark_detected", False)),
+    )
+
+    fusion_payload = signals.model_dump() | {
+        "artifact_score": raw_signals.get("artifact_score", 0.0),
+        "watermark_detected": flags.watermark_detected,
+    }
+    fusion_result = _fusion_engine.fuse(fusion_payload)
     confidence = _clamp(fusion_result.get("confidence", 0.5))
     verdict_value = fusion_result.get("verdict")
     if isinstance(verdict_value, str) and verdict_value in Verdict._value2member_map_:
@@ -98,5 +113,6 @@ async def upload_verification(request: Request, body: VerifyUploadRequest):
         verdict=verdict,
         confidence=confidence,
         signals=signals,
+        flags=flags,
     )
     return success_envelope(request, data)

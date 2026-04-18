@@ -6,4 +6,5 @@ The canonical OpenAPI specification for VerifyIQ lives in [openapi.yaml](../open
 - Auth: Bearer JWT
 - Response envelope: {success, data, error, meta}
 - Upload-only: POST /v1/verify/upload for image/video batch verification
+	- Response includes `signals` and `flags` (artifact, frequency anomaly, temporal inconsistency, watermark)
 - OpenAPI sync: run scripts/generate_openapi.py to regenerate or scripts/validate_openapi.py in CI to detect drift
