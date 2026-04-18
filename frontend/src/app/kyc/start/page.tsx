@@ -1,32 +1,28 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { ApiError, startVerification } from "@/lib/api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useSessionStore } from "@/store/session";
-import type { SessionType } from "@/types/api";
+import type { InputType } from "@/types/api";
 
-const sessionOptions: { label: string; value: SessionType }[] = [
-  { label: "Photo verification", value: "photo" },
-  { label: "Video verification", value: "video" },
+const sessionOptions: { label: string; value: InputType }[] = [
+  { label: "Selfie image", value: "image" },
+  { label: "Short video", value: "video" },
 ];
 
 export default function KycStartPage() {
   const router = useRouter();
-  const abortRef = useRef<AbortController | null>(null);
   const [userId, setUserId] = useState("");
-  const [sessionType, setSessionType] = useState<SessionType>("photo");
+  const [inputType, setInputType] = useState<InputType>("image");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { setSession, setStatus, setError, clearError, error, resetSession } =
+  const { setUserInput, setStatus, setError, clearError, error, resetSession } =
     useSessionStore();
 
   useEffect(() => {
-    return () => {
-      abortRef.current?.abort();
-    };
+    return () => undefined;
   }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -39,38 +35,19 @@ export default function KycStartPage() {
       return;
     }
 
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
     resetSession();
     clearError();
     setStatus("loading");
     setIsSubmitting(true);
 
     try {
-      const data = await startVerification(
-        {
-          user_id: userId.trim(),
-          session_type: sessionType,
-        },
-        { signal: controller.signal },
-      );
-      setSession(data.session_id, data.challenges);
-      router.push("/kyc/capture");
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError({
-          code: err.code,
-          message: err.message,
-          details: err.details,
-          requestId: err.requestId,
-        });
-      } else {
-        setError({
-          code: "UNKNOWN",
-          message: "Unable to start a session. Please try again.",
-        });
-      }
+      setUserInput(userId.trim(), inputType);
+      router.push("/kyc/submit");
+    } catch {
+      setError({
+        code: "UNKNOWN",
+        message: "Unable to proceed. Please try again.",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -112,9 +89,9 @@ export default function KycStartPage() {
                   <button
                     key={option.value}
                     type="button"
-                    onClick={() => setSessionType(option.value)}
+                    onClick={() => setInputType(option.value)}
                     className={`rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
-                      sessionType === option.value
+                      inputType === option.value
                         ? "border-black bg-black text-white"
                         : "border-[#d3e4fe] bg-white text-[#57657b]"
                     }`}

@@ -5,8 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ApiError, submitVerification } from "@/lib/api";
-import { stripBase64Prefix, validateImageFile, validateImagePixels } from "@/lib/validators";
+import { ApiError, uploadVerification } from "@/lib/api";
+import {
+  stripBase64Prefix,
+  validateImageFile,
+  validateImagePixels,
+  validateVideoFile,
+} from "@/lib/validators";
 import { useSessionStore } from "@/store/session";
 
 async function fileToBase64(file: File): Promise<string> {
@@ -31,14 +36,14 @@ export default function KycSubmitPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
-  const [retryPayload, setRetryPayload] = useState<string | null>(null);
-  const { sessionId, setSubmitResult, resetSession } = useSessionStore();
+  const { userId, inputType, setSubmitResult, setError, clearError, error } =
+    useSessionStore();
 
   useEffect(() => {
-    if (!sessionId) {
+    if (!userId) {
       router.replace("/kyc/start");
     }
-  }, [router, sessionId]);
+  }, [router, userId]);
 
   useEffect(() => {
     return () => {
@@ -52,7 +57,6 @@ export default function KycSubmitPage() {
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const selected = event.target.files?.[0] ?? null;
     setLocalError(null);
-    setRetryPayload(null);
 
     if (!selected) {
       setFile(null);
@@ -63,104 +67,83 @@ export default function KycSubmitPage() {
       return;
     }
 
-    const validation = validateImageFile(selected);
-    if (!validation.ok) {
-      setLocalError(validation.message ?? "Invalid image file");
-      return;
-    }
-    try {
-      const pixelCheck = await validateImagePixels(selected);
-      if (!pixelCheck.ok) {
-        setLocalError(pixelCheck.message ?? "Invalid image dimensions");
+    if (inputType === "image") {
+      const validation = validateImageFile(selected);
+      if (!validation.ok) {
+        setLocalError(validation.message ?? "Invalid image file");
         return;
       }
-    } catch (error) {
-      setLocalError("Unable to validate image dimensions");
-      return;
+      try {
+        const pixelCheck = await validateImagePixels(selected);
+        if (!pixelCheck.ok) {
+          setLocalError(pixelCheck.message ?? "Invalid image dimensions");
+          return;
+        }
+      } catch {
+        setLocalError("Unable to validate image dimensions");
+        return;
+      }
+    } else {
+      const validation = validateVideoFile(selected);
+      if (!validation.ok) {
+        setLocalError(validation.message ?? "Invalid video file");
+        return;
+      }
     }
 
     setFile(selected);
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
     }
-    setPreviewUrl(URL.createObjectURL(selected));
+    if (inputType === "image") {
+      setPreviewUrl(URL.createObjectURL(selected));
+    } else {
+      setPreviewUrl(null);
+    }
   };
 
-  const sendPayload = async (payload: string) => {
-    if (!sessionId) {
+  const handleSubmit = async () => {
+    if (!userId) {
       return;
     }
+    if (!file) {
+      setLocalError("Please select a file.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setLocalError(null);
+    clearError();
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const idempotencyKey =
-      typeof crypto !== "undefined" && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `idempotency-${Date.now()}`;
-
-    const response = await submitVerification(
-      {
-        session_id: sessionId,
-        id_image_b64: payload,
-      },
-      { idempotencyKey, signal: controller.signal },
-    );
-    setSubmitResult(response);
-    router.push("/kyc/result");
-  };
-
-  const handleSubmit = async () => {
-    if (!file) {
-      setLocalError("Please select an ID image.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setLocalError(null);
-
     try {
       const dataUrl = await fileToBase64(file);
       const base64 = stripBase64Prefix(dataUrl);
-      setRetryPayload(base64);
-      await sendPayload(base64);
+      const response = await uploadVerification(
+        {
+          user_id: userId,
+          input_type: inputType,
+          file: base64,
+        },
+        { signal: controller.signal },
+      );
+      setSubmitResult(response);
+      router.push("/kyc/result");
     } catch (err) {
       if (err instanceof ApiError) {
-        if (err.code === "IDEMPOTENCY_CONFLICT") {
-          setLocalError("Idempotency conflict. Retry the submission.");
-          return;
-        }
-        if (err.code === "INVALID_IMAGE") {
-          setLocalError("The image was rejected. Please choose another.");
-          return;
-        }
-        if (err.code === "SESSION_EXPIRED" || err.code === "SESSION_NOT_FOUND") {
-          resetSession();
-          router.replace("/kyc/start");
-          return;
-        }
-        setLocalError(err.message);
+        setError({
+          code: err.code,
+          message: err.message,
+          details: err.details,
+          requestId: err.requestId,
+        });
       } else {
-        setLocalError("Unable to submit the document.");
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleRetry = async () => {
-    if (!retryPayload) {
-      return;
-    }
-    setIsSubmitting(true);
-    setLocalError(null);
-    try {
-      await sendPayload(retryPayload);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setLocalError(err.message);
-      } else {
-        setLocalError("Unable to retry submission.");
+        setError({
+          code: "UNKNOWN",
+          message: "Unable to submit the file.",
+        });
       }
     } finally {
       setIsSubmitting(false);
@@ -173,23 +156,26 @@ export default function KycSubmitPage() {
         <div className="space-y-6">
           <div className="rounded-3xl bg-white p-8 shadow-soft">
             <p className="text-xs font-black uppercase tracking-[0.3em] text-[#45464d]">
-              Step 4
+              Step 2
             </p>
             <h1 className="mt-3 text-3xl font-black tracking-tight text-[#0b1c30]">
-              Submit your ID document
+              Upload {inputType === "image" ? "selfie image" : "short video"}
             </h1>
             <p className="mt-3 text-sm text-[#45464d]">
-              Upload a clear photo of a government-issued ID. The image must be
-              JPEG or PNG and under 2MB.
+              The file will be analyzed offline for deepfake artifacts.
             </p>
           </div>
 
           <div className="rounded-3xl bg-white p-6 shadow-soft">
             <label className="block text-xs font-bold uppercase tracking-[0.2em] text-[#45464d]">
-              ID Image
+              {inputType === "image" ? "Selfie image" : "Short video"}
               <input
                 type="file"
-                accept="image/jpeg,image/png"
+                accept={
+                  inputType === "image"
+                    ? "image/jpeg,image/png"
+                    : "video/mp4,video/webm,video/quicktime"
+                }
                 onChange={handleFileChange}
                 className="mt-3 w-full text-sm"
               />
@@ -200,16 +186,16 @@ export default function KycSubmitPage() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={previewUrl}
-                  alt="ID preview"
+                  alt="Selfie preview"
                   className="h-64 w-full object-cover"
                 />
               </div>
             )}
 
-            {localError && (
+            {(localError || error) && (
               <Alert variant="danger" className="mt-4">
-                <AlertTitle>Submission error</AlertTitle>
-                <AlertDescription>{localError}</AlertDescription>
+                <AlertTitle>{error ? error.code : "Upload error"}</AlertTitle>
+                <AlertDescription>{error ? error.message : localError}</AlertDescription>
               </Alert>
             )}
 
@@ -220,37 +206,15 @@ export default function KycSubmitPage() {
                 disabled={isSubmitting}
                 className="rounded-xl bg-black px-6 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {isSubmitting ? "Submitting..." : "Submit Verification"}
+                {isSubmitting ? "Uploading..." : "Run Verification"}
               </button>
               <Link
-                href="/kyc/challenge"
+                href="/kyc/start"
                 className="rounded-xl bg-[#d3e4fe] px-6 py-3 text-sm font-bold text-[#57657b]"
               >
                 Back
               </Link>
-              {retryPayload && (
-                <button
-                  type="button"
-                  onClick={handleRetry}
-                  className="rounded-xl border border-black px-6 py-3 text-sm font-bold text-black"
-                >
-                  Retry Submit
-                </button>
-              )}
             </div>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div className="rounded-3xl bg-[#eff4ff] p-6">
-            <p className="text-xs font-black uppercase tracking-widest text-[#45464d]">
-              Quality checklist
-            </p>
-            <ul className="mt-4 space-y-2 text-sm text-[#45464d]">
-              <li>Ensure all four corners of the ID are visible.</li>
-              <li>Avoid glare, reflections, or heavy shadows.</li>
-              <li>Text should be sharp and readable.</li>
-            </ul>
           </div>
         </div>
       </div>

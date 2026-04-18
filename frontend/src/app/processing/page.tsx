@@ -99,11 +99,35 @@ export default function ProcessingPage() {
             className="mt-6 inline-flex items-center gap-2 rounded-xl bg-black px-5 py-3 text-sm font-bold text-white"
             href="/results"
           >
-            <span className="material-symbols-outlined text-sm">arrow_forward</span>
-            View Results Now
-          </Link>
-        </section>
-      </main>
-    </div>
+            sync
+          </span>
+          Processing
+        </p>
+        <h1 className="mt-5 text-4xl font-black tracking-[-0.02em]">
+          Analyzing Uploaded Media
+        </h1>
+        <p className="mt-3 text-sm text-[#45464d]">
+          Deepfake and artifact checks are running. You will be redirected to
+          verification results automatically.
+        </p>
+
+        <div className="mt-8 flex justify-center">
+          <div aria-label="Loading" className="loader"></div>
+        </div>
+
+        <div className="mt-8 rounded-xl bg-[#eff4ff] px-4 py-3 text-xs text-[#45464d]">
+          Secure pipeline active: spatial, frequency, and temporal checks in
+          progress.
+        </div>
+
+        <Link
+          className="mt-6 inline-flex items-center gap-2 rounded-xl bg-black px-5 py-3 text-sm font-bold text-white"
+          href="/results"
+        >
+          <span className="material-symbols-outlined text-sm">arrow_forward</span>
+          View Results Now
+        </Link>
+      </section>
+    </main>
   );
 }
