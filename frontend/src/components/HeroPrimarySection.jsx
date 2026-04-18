@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import ColorBends from "../../components/ColorBends";
+import BlurText from "../../components/BlurText";
 
 function HeroPrimarySection() {
   return (
@@ -29,10 +30,24 @@ function HeroPrimarySection() {
             </span>
             AI Deepfake Defense
           </p>
-          <h1 className="mb-5 text-5xl font-black leading-[1.05] tracking-[-0.02em] text-[#0b1c30] md:text-7xl">
-            Know Who's Real.
-            <br />
-            Instantly.
+          <h1 className="-mt-2 mb-5 text-5xl font-black leading-[1.05] tracking-[-0.02em] text-[#0b1c30] md:-mt-4 md:text-7xl">
+            <BlurText
+              as="span"
+              className="block"
+              text="Know Who's Real,"
+              delay={140}
+              animateBy="words"
+              direction="top"
+            />
+            <BlurText
+              as="span"
+              className="block"
+              text="Instantly."
+              delay={140}
+              animateBy="words"
+              direction="top"
+              rootMargin="0px 0px -8% 0px"
+            />
           </h1>
           <p className="max-w-2xl text-base font-medium leading-relaxed text-[#3d4f6a] md:text-lg">
             Advanced AI detection for secure identity verification across HR and fintech systems.

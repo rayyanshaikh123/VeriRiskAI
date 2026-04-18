@@ -1,5 +1,3 @@
-"use client";
-
 import { useRef, useCallback, useEffect } from 'react';
 import './BorderGlow.css';
 
@@ -117,18 +115,13 @@ const BorderGlow = ({
     card.style.setProperty('--cursor-angle', `${angleStart}deg`);
 
     animateValue({ duration: 500, onUpdate: v => card.style.setProperty('--edge-proximity', v) });
-    animateValue({
-      ease: easeInCubic, duration: 1500, end: 50, onUpdate: v => {
-        card.style.setProperty('--cursor-angle', `${(angleEnd - angleStart) * (v / 100) + angleStart}deg`);
-      }
-    });
-    animateValue({
-      ease: easeOutCubic, delay: 1500, duration: 2250, start: 50, end: 100, onUpdate: v => {
-        card.style.setProperty('--cursor-angle', `${(angleEnd - angleStart) * (v / 100) + angleStart}deg`);
-      }
-    });
-    animateValue({
-      ease: easeInCubic, delay: 2500, duration: 1500, start: 100, end: 0,
+    animateValue({ ease: easeInCubic, duration: 1500, end: 50, onUpdate: v => {
+      card.style.setProperty('--cursor-angle', `${(angleEnd - angleStart) * (v / 100) + angleStart}deg`);
+    }});
+    animateValue({ ease: easeOutCubic, delay: 1500, duration: 2250, start: 50, end: 100, onUpdate: v => {
+      card.style.setProperty('--cursor-angle', `${(angleEnd - angleStart) * (v / 100) + angleStart}deg`);
+    }});
+    animateValue({ ease: easeInCubic, delay: 2500, duration: 1500, start: 100, end: 0,
       onUpdate: v => card.style.setProperty('--edge-proximity', v),
       onEnd: () => card.classList.remove('sweep-active'),
     });
