@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Threads from "../../components/Threads";
-import SpotlightCard from "../../components/SpotlightCard";
+import Threads from "@/components/Threads";
+import SpotlightCard from "@/components/SpotlightCard";
 
 export default function HomePage() {
   return (
