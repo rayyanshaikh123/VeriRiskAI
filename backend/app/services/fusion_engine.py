@@ -25,9 +25,14 @@ class FusionEngine:
         temporal = signals.get("temporal_score")
         temporal_score = clamp01(temporal) if temporal is not None else None
         artifact = clamp01(signals.get("artifact_score", 0.0))
-        watermark = 1.0 if signals.get("watermark_detected") else 0.0
+        watermark_score = signals.get("watermark_score")
+        watermark = (
+            clamp01(watermark_score)
+            if watermark_score is not None
+            else 1.0 if signals.get("watermark_detected") else 0.0
+        )
 
-        score = 0.5 * spatial + 0.25 * frequency + 0.05 * artifact + 0.05 * watermark
+        score = 0.5 * spatial + 0.15 * frequency + 0.1 * artifact + 0.1 * watermark
         if temporal_score is not None:
             score += 0.15 * temporal_score
         return clamp01(score)
@@ -36,13 +41,19 @@ class FusionEngine:
         if self._xgb_model is None:
             return self._weighted_score(signals)
 
+        watermark_score = signals.get("watermark_score")
+        watermark = (
+            clamp01(watermark_score)
+            if watermark_score is not None
+            else 1.0 if signals.get("watermark_detected") else 0.0
+        )
         feature_vector = np.array(
             [
                 clamp01(signals.get("spatial_fake_score", 0.0)),
                 clamp01(signals.get("frequency_fake_score", 0.0)),
                 clamp01(signals.get("temporal_score") or 0.0),
                 clamp01(signals.get("artifact_score", 0.0)),
-                1.0 if signals.get("watermark_detected") else 0.0,
+                watermark,
             ],
             dtype=np.float32,
         ).reshape(1, -1)
