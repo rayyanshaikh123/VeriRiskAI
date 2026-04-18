@@ -34,7 +34,7 @@ export class ApiError extends Error {
   }
 }
 
-const DEFAULT_BASE_URL = "";
+const DEFAULT_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
 function resolveBaseUrl(explicit?: string): string {
   if (explicit) {

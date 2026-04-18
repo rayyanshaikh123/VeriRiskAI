@@ -179,60 +179,69 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] antialiased">
+    <div className="page-background min-h-screen antialiased">
       <header className="fixed top-0 z-50 w-full">
         <div className="mx-auto flex h-20 w-full max-w-screen-2xl items-center justify-center px-6 md:px-8">
           <nav className="master-pill-nav" aria-label="Primary navigation">
-            <Link className="master-pill-item" href="/">Home</Link>
-            <Link className="master-pill-item" href="/#quick-start">Quick Start</Link>
-            <Link className="master-pill-item master-pill-upload is-active" href="/upload">Upload</Link>
+            <Link className="master-pill-item" href="/">
+              Home
+            </Link>
+            <Link className="master-pill-item" href="/#quick-start">
+              Quick Start
+            </Link>
+            <Link className="master-pill-item is-active" href="/upload">
+              Upload
+            </Link>
           </nav>
         </div>
       </header>
 
-      <main className="px-6 pb-12 pt-24 md:px-8">
+      <main className="px-6 pb-16 pt-28 md:px-8">
         <div className="mx-auto max-w-6xl">
-          <header className="mb-12">
-            <h1 className="mb-4 text-[3.5rem] font-bold leading-[1.1] tracking-tight text-black">
+          <header className="mb-12 text-center">
+            <h1 className="mb-3 text-3xl font-semibold leading-tight tracking-tight text-primary md:text-5xl">
               Upload Verification Media.
             </h1>
-            <p className="max-w-xl text-lg text-[#45464d]">
+            <p className="mx-auto max-w-xl text-base text-muted md:text-lg">
               Upload a selfie image or short video to trigger offline deepfake analysis.
             </p>
           </header>
 
-          <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:justify-center">
             <div className="space-y-8">
-              <div className="rounded-3xl bg-white p-6 shadow-soft">
-                <div className="grid gap-4 md:grid-cols-[1.2fr_1fr]">
-                  <label className="text-xs font-bold uppercase tracking-[0.2em] text-[#45464d]">
-                    User ID
-                    <input
-                      type="text"
-                      value={userId}
-                      onChange={(event) => setUserId(event.target.value)}
-                      placeholder="e.g. user_12345"
-                      className="mt-2 w-full rounded-2xl border border-[#d3e4fe] bg-white px-4 py-3 text-sm focus:border-black focus:outline-none"
-                    />
-                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
-                      <span className="text-[#57657b]">Demo:</span>
-                      {demoUsers.map((demo) => (
-                        <button
-                          key={demo}
-                          type="button"
-                          onClick={() => setUserId(demo)}
-                          className="rounded-full border border-[#d3e4fe] bg-[#f4f8ff] px-3 py-1 text-[#2f3a4d] transition hover:border-black"
-                        >
-                          {demo}
-                        </button>
-                      ))}
-                    </div>
-                  </label>
-                  <div className="space-y-2">
-                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#45464d]">
+              <div className="grid gap-6">
+                <div className="space-y-6">
+                  <div className="surface-card p-6">
+                    <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+                      User ID
+                      <input
+                        type="text"
+                        value={userId}
+                        onChange={(event) => setUserId(event.target.value)}
+                        placeholder="e.g. user_12345"
+                        className="mt-2 w-full rounded-lg border border-muted bg-[var(--surface)] px-4 py-3 text-sm text-primary focus:border-[var(--text)] focus:outline-none"
+                      />
+                      <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
+                        <span className="text-muted">Demo:</span>
+                        {demoUsers.map((demo) => (
+                          <button
+                            key={demo}
+                            type="button"
+                            onClick={() => setUserId(demo)}
+                            className="rounded-full border border-muted bg-[var(--surface)] px-3 py-1 text-primary transition hover:border-[var(--text)]"
+                          >
+                            {demo}
+                          </button>
+                        ))}
+                      </div>
+                    </label>
+                  </div>
+
+                  <div className="surface-card p-6">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
                       Input type
                     </p>
-                    <div className="grid gap-2">
+                    <div className="mt-3 grid gap-2">
                       {inputOptions.map((option) => (
                         <button
                           key={option.value}
@@ -245,10 +254,10 @@ export default function UploadPage() {
                               setPreviewUrl(null);
                             }
                           }}
-                          className={`rounded-2xl border px-4 py-2 text-left text-xs font-semibold transition ${
+                          className={`rounded-lg border px-4 py-3 text-left text-xs font-semibold transition ${
                             inputType === option.value
-                              ? "border-black bg-black text-white"
-                              : "border-[#d3e4fe] bg-white text-[#57657b]"
+                              ? "pill-active"
+                              : "border-muted bg-[var(--surface)] text-muted"
                           }`}
                         >
                           {option.label}
@@ -257,40 +266,52 @@ export default function UploadPage() {
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="rounded-[2rem] border border-white/40 bg-white p-6">
-                <h4 className="mb-4 text-sm font-black uppercase tracking-widest text-[#45464d]">
-                  Upload media
-                </h4>
-                <input
-                  type="file"
-                  accept={
-                    inputType === "image"
-                      ? "image/jpeg,image/png"
-                      : "video/mp4,video/webm,video/quicktime"
-                  }
-                  onChange={handleFileChange}
-                  className="w-full text-sm"
-                />
+                <div className="space-y-6">
+                  <div className="surface-card p-6">
+                    <h4 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+                      Upload media
+                    </h4>
+                    <label className="flex min-h-[180px] cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-muted bg-[var(--surface)] px-6 py-8 text-center text-sm text-muted transition hover:border-[var(--text)]">
+                      <span className="text-base font-semibold text-primary">
+                        Choose {inputType === "image" ? "a selfie image" : "a short video"}
+                      </span>
+                      <span className="text-xs text-muted">
+                        {inputType === "image"
+                          ? "JPEG/PNG up to 2MB."
+                          : "MP4/WEBM/QuickTime up to 15MB."}
+                      </span>
+                      <input
+                        type="file"
+                        accept={
+                          inputType === "image"
+                            ? "image/jpeg,image/png"
+                            : "video/mp4,video/webm,video/quicktime"
+                        }
+                        onChange={handleFileChange}
+                        className="sr-only"
+                      />
+                    </label>
 
-                {previewUrl && (
-                  <div className="mt-4 overflow-hidden rounded-2xl border border-[#d3e4fe]">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={previewUrl}
-                      alt="Selfie preview"
-                      className="h-40 w-full object-cover"
-                    />
+                    {previewUrl && (
+                      <div className="mt-4 overflow-hidden rounded-lg border border-muted">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={previewUrl}
+                          alt="Selfie preview"
+                          className="h-40 w-full object-cover"
+                        />
+                      </div>
+                    )}
+
+                    {fileMeta && !previewUrl && (
+                      <div className="mt-4 rounded-lg border border-dashed border-muted p-4 text-sm text-muted">
+                        <div className="font-semibold text-primary">{fileMeta.name}</div>
+                        <div className="text-xs text-muted">{fileMeta.size}</div>
+                      </div>
+                    )}
                   </div>
-                )}
-
-                {fileMeta && !previewUrl && (
-                  <div className="mt-4 rounded-2xl border border-dashed border-[#c6c6cd] p-4 text-sm text-[#45464d]">
-                    <div className="font-semibold text-[#0b1c30]">{fileMeta.name}</div>
-                    <div className="text-xs">{fileMeta.size}</div>
-                  </div>
-                )}
+                </div>
               </div>
 
               {(localError || error) && (
@@ -300,9 +321,9 @@ export default function UploadPage() {
                 </Alert>
               )}
 
-              <div className="flex flex-wrap items-center justify-center gap-6 pt-2">
+              <div className="flex flex-col-reverse items-center gap-4 pt-2 sm:flex-row sm:justify-between">
                 <Link
-                  className="inline-flex items-center rounded-full border border-[#e4ebff] bg-white px-5 py-2 text-sm font-semibold text-[#0b1c30] shadow-sm transition hover:border-[#c8d6ff] hover:shadow-md"
+                  className="btn-secondary w-full px-5 py-2 text-sm sm:w-auto"
                   href="/"
                 >
                   Back to Landing
@@ -311,10 +332,10 @@ export default function UploadPage() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  className={`group flex items-center space-x-4 rounded-xl px-8 py-4 text-lg font-bold transition ${
+                  className={`btn-primary group w-full px-8 py-4 text-base sm:w-auto ${
                     isSubmitting
-                      ? "cursor-not-allowed bg-[#d3e4fe] text-[#57657b]"
-                      : "bg-black text-white"
+                      ? "cursor-not-allowed bg-slate-200 text-slate-500"
+                      : "bg-slate-900 text-white"
                   }`}
                 >
                   <span>{isSubmitting ? "Uploading..." : "Continue to Processing"}</span>
@@ -325,61 +346,61 @@ export default function UploadPage() {
               </div>
             </div>
 
-            <div className="space-y-8 lg:col-span-4">
-              <div className="rounded-[2rem] border border-white/40 bg-white p-6">
-                <h4 className="mb-4 text-sm font-black uppercase tracking-widest text-[#45464d]">
+            <div className="space-y-8">
+              <div className="surface-card p-6">
+                <h4 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
                   Upload checklist
                 </h4>
-                <ul className="space-y-2 text-xs text-[#45464d]">
+                <ul className="space-y-2 text-xs text-muted">
                   <li>Single selfie image or short video only.</li>
                   <li>JPEG/PNG for images, MP4/WEBM for video.</li>
                   <li>Keep lighting even and avoid motion blur.</li>
                 </ul>
               </div>
 
-              <div className="rounded-[2rem] border border-[#e4ebff] bg-white/90 p-7 shadow-sm shadow-slate-900/5 transition hover:border-[#c8d6ff]">
-                <h4 className="mb-4 flex items-center text-base font-black text-[#0b1c30]">
-                  <span className="material-symbols-outlined mr-2 text-lg text-[#0b1c30]">
+              <div className="surface-card p-7">
+                <h4 className="mb-4 flex items-center text-base font-semibold text-primary">
+                  <span className="material-symbols-outlined mr-2 text-lg text-muted">
                     verified_user
                   </span>
                   Media Verification Guidelines
                 </h4>
                 <div className="space-y-6">
                   <div className="flex items-start space-x-4">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#6ffbbe]">
-                      <span className="material-symbols-outlined text-sm text-[#005236]">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-muted)]">
+                      <span className="material-symbols-outlined text-sm text-muted">
                         light_mode
                       </span>
                     </div>
                     <div>
-                      <h5 className="mb-1 text-sm font-bold">Avoid Direct Glare</h5>
-                      <p className="text-xs leading-relaxed text-[#45464d]">
+                      <h5 className="mb-1 text-sm font-semibold text-primary">Avoid Direct Glare</h5>
+                      <p className="text-xs leading-relaxed text-muted">
                         Ensure lighting is uniform and your face is fully visible.
                       </p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-4">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#ffd36f]">
-                      <span className="material-symbols-outlined text-sm text-[#7a4f00]">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-muted)]">
+                      <span className="material-symbols-outlined text-sm text-muted">
                         crop
                       </span>
                     </div>
                     <div>
-                      <h5 className="mb-1 text-sm font-bold">Keep In Frame</h5>
-                      <p className="text-xs leading-relaxed text-[#45464d]">
+                      <h5 className="mb-1 text-sm font-semibold text-primary">Keep In Frame</h5>
+                      <p className="text-xs leading-relaxed text-muted">
                         Avoid cropped foreheads or chins for best detection quality.
                       </p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-4">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#cddcff]">
-                      <span className="material-symbols-outlined text-sm text-[#233b72]">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-muted)]">
+                      <span className="material-symbols-outlined text-sm text-muted">
                         visibility
                       </span>
                     </div>
                     <div>
-                      <h5 className="mb-1 text-sm font-bold">Readable Detail</h5>
-                      <p className="text-xs leading-relaxed text-[#45464d]">
+                      <h5 className="mb-1 text-sm font-semibold text-primary">Readable Detail</h5>
+                      <p className="text-xs leading-relaxed text-muted">
                         Higher resolution improves frequency and artifact analysis.
                       </p>
                     </div>
