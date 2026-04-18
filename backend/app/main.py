@@ -31,7 +31,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         "Validation error",
         details={"errors": exc.errors()},
     )
-    return JSONResponse(status_code=422, content=envelope.model_dump())
+    return JSONResponse(status_code=422, content=envelope.model_dump(mode="json"))
 
 
 @app.exception_handler(HTTPException)
@@ -43,10 +43,10 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     message = detail.get("message", "Request failed")
     details = detail.get("details")
     envelope = error_envelope(request, error_code, message, details=details)
-    return JSONResponse(status_code=exc.status_code, content=envelope.model_dump())
+    return JSONResponse(status_code=exc.status_code, content=envelope.model_dump(mode="json"))
 
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
     envelope = error_envelope(request, ErrorCode.INTERNAL_ERROR, "Internal error")
-    return JSONResponse(status_code=500, content=envelope.model_dump())
+    return JSONResponse(status_code=500, content=envelope.model_dump(mode="json"))
