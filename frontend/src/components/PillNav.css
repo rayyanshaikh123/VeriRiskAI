@@ -1,0 +1,39 @@
+.pill-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px;
+    border-radius: 9999px;
+    background: rgba(25, 41, 60, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 28px rgba(11, 28, 48, 0.18);
+}
+
+.pill-nav-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 0 16px;
+    border-radius: 9999px;
+    color: rgba(237, 242, 255, 0.88);
+    text-decoration: none;
+    font-size: 0.86rem;
+    font-weight: 650;
+    letter-spacing: 0.01em;
+    transition: background-color 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.pill-nav-item:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.pill-nav-item.is-active {
+    background: #ffffff;
+    color: #0b1c30;
+}
+
+.pill-nav-item:active {
+    transform: translateY(1px);
+}

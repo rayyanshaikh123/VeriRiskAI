@@ -9,8 +9,8 @@ import redis
 
 from app.core.config import settings
 from app.schemas.admin import EventType
-from app.schemas.common import ChallengeType, SessionState, SessionType, Verdict
-from app.schemas.verify import ChallengePrompt, HeatmapArtifact, SignalBreakdown
+from app.schemas.common import SessionState, SessionType, Verdict
+from app.schemas.verify import SignalBreakdown
 
 
 @dataclass
@@ -23,12 +23,9 @@ class SessionRecord:
     expires_at: datetime
     last_activity_at: datetime
     frame_count: int
-    challenges: List[ChallengePrompt]
-    challenge_passed: bool
     verdict: Optional[Verdict] = None
     confidence: Optional[float] = None
     signals: Optional[SignalBreakdown] = None
-    heatmap: Optional[HeatmapArtifact] = None
 
 
 @dataclass
@@ -78,9 +75,6 @@ class RedisStore:
     def _expires_at(self, created_at: datetime) -> datetime:
         return created_at + timedelta(minutes=settings.session_ttl_minutes)
 
-    def _challenge_expiry(self, now: datetime) -> datetime:
-        return now + timedelta(minutes=2)
-
     def _serialize_session(self, record: SessionRecord) -> Dict[str, str]:
         return {
             "session_id": record.session_id,
@@ -91,12 +85,9 @@ class RedisStore:
             "expires_at": record.expires_at.isoformat(),
             "last_activity_at": record.last_activity_at.isoformat(),
             "frame_count": str(record.frame_count),
-            "challenges": json.dumps([challenge.model_dump(mode="json") for challenge in record.challenges]),
-            "challenge_passed": json.dumps(record.challenge_passed),
             "verdict": record.verdict.value if record.verdict else "",
             "confidence": json.dumps(record.confidence),
             "signals": json.dumps(record.signals.model_dump(mode="json") if record.signals else None),
-            "heatmap": json.dumps(record.heatmap.model_dump(mode="json") if record.heatmap else None),
         }
 
     def _deserialize_session(self, payload: Dict[str, str]) -> SessionRecord:
@@ -109,18 +100,10 @@ class RedisStore:
             expires_at=datetime.fromisoformat(payload["expires_at"]),
             last_activity_at=datetime.fromisoformat(payload["last_activity_at"]),
             frame_count=int(payload.get("frame_count", "0")),
-            challenges=[
-                ChallengePrompt.model_validate(item)
-                for item in json.loads(payload.get("challenges", "[]"))
-            ],
-            challenge_passed=json.loads(payload.get("challenge_passed", "false")),
             verdict=Verdict(payload["verdict"]) if payload.get("verdict") else None,
             confidence=json.loads(payload.get("confidence", "null")),
             signals=SignalBreakdown.model_validate(json.loads(payload["signals"]))
             if payload.get("signals")
-            else None,
-            heatmap=HeatmapArtifact.model_validate(json.loads(payload["heatmap"]))
-            if payload.get("heatmap")
             else None,
         )
 
@@ -139,18 +122,6 @@ class RedisStore:
     def create_session(self, user_id: str, session_type: SessionType) -> SessionRecord:
         now = self._now()
         session_id = str(uuid4())
-        challenges = [
-            ChallengePrompt(
-                type=ChallengeType.blink,
-                value="blink",
-                expires_at=self._challenge_expiry(now),
-            ),
-            ChallengePrompt(
-                type=ChallengeType.number,
-                value=7,
-                expires_at=self._challenge_expiry(now),
-            ),
-        ]
         record = SessionRecord(
             session_id=session_id,
             user_id=user_id,
@@ -160,8 +131,6 @@ class RedisStore:
             expires_at=self._expires_at(now),
             last_activity_at=now,
             frame_count=0,
-            challenges=challenges,
-            challenge_passed=False,
         )
         self.client.hset(self._session_key(session_id), mapping=self._serialize_session(record))
         ttl_seconds = settings.session_ttl_minutes * 60
@@ -216,10 +185,6 @@ class RedisStore:
             if record.state == SessionState.CREATED:
                 record.state = SessionState.IN_PROGRESS
             self._add_audit(record.session_id, EventType.FRAME_RECEIVED, "system")
-            if record.frame_count >= settings.min_frames and not record.challenge_passed:
-                record.challenge_passed = True
-                record.state = SessionState.CHALLENGE_PASSED
-                self._add_audit(record.session_id, EventType.CHALLENGE_PASSED, "system")
             self.client.hset(self._session_key(session_id), mapping=self._serialize_session(record))
             ttl_seconds = settings.session_ttl_minutes * 60
             self.client.expire(self._session_key(session_id), ttl_seconds)
@@ -234,7 +199,6 @@ class RedisStore:
         verdict: Verdict,
         confidence: float,
         signals: SignalBreakdown,
-        heatmap: Optional[HeatmapArtifact],
     ) -> SessionRecord:
         lock_key = self._session_lock_key(session_id)
         token = self.acquire_lock(lock_key)
@@ -250,7 +214,6 @@ class RedisStore:
             record.verdict = verdict
             record.confidence = confidence
             record.signals = signals
-            record.heatmap = heatmap
             self._add_audit(record.session_id, EventType.SUBMITTED, "system")
             record.state = SessionState.COMPLETED
             self._add_audit(record.session_id, EventType.COMPLETED, "system")
