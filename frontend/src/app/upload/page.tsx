@@ -190,10 +190,10 @@ export default function UploadPage() {
         </div>
       </header>
 
-      <main className="px-6 pb-12 pt-24 md:px-8">
+      <main className="px-6 pb-16 pt-28 md:px-8">
         <div className="mx-auto max-w-6xl">
           <header className="mb-12">
-            <h1 className="mb-4 text-[3.5rem] font-bold leading-[1.1] tracking-tight text-black">
+            <h1 className="mb-4 text-3xl font-bold leading-tight tracking-tight text-black md:text-5xl">
               Upload Verification Media.
             </h1>
             <p className="max-w-xl text-lg text-[#45464d]">
@@ -228,7 +228,7 @@ export default function UploadPage() {
                       ))}
                     </div>
                   </label>
-                  <div className="space-y-2">
+                    <div className="space-y-2">
                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#45464d]">
                       Input type
                     </p>
@@ -245,7 +245,7 @@ export default function UploadPage() {
                               setPreviewUrl(null);
                             }
                           }}
-                          className={`rounded-2xl border px-4 py-2 text-left text-xs font-semibold transition ${
+                            className={`rounded-2xl border px-4 py-3 text-left text-xs font-semibold transition ${
                             inputType === option.value
                               ? "border-black bg-black text-white"
                               : "border-[#d3e4fe] bg-white text-[#57657b]"
@@ -263,16 +263,26 @@ export default function UploadPage() {
                 <h4 className="mb-4 text-sm font-black uppercase tracking-widest text-[#45464d]">
                   Upload media
                 </h4>
-                <input
-                  type="file"
-                  accept={
-                    inputType === "image"
-                      ? "image/jpeg,image/png"
-                      : "video/mp4,video/webm,video/quicktime"
-                  }
-                  onChange={handleFileChange}
-                  className="w-full text-sm"
-                />
+                <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#d3e4fe] bg-[#f7f9ff] px-6 py-8 text-center text-sm text-[#57657b] transition hover:border-black">
+                  <span className="text-base font-semibold text-[#0b1c30]">
+                    Choose {inputType === "image" ? "a selfie image" : "a short video"}
+                  </span>
+                  <span className="text-xs">
+                    {inputType === "image"
+                      ? "JPEG/PNG up to 2MB."
+                      : "MP4/WEBM/QuickTime up to 15MB."}
+                  </span>
+                  <input
+                    type="file"
+                    accept={
+                      inputType === "image"
+                        ? "image/jpeg,image/png"
+                        : "video/mp4,video/webm,video/quicktime"
+                    }
+                    onChange={handleFileChange}
+                    className="sr-only"
+                  />
+                </label>
 
                 {previewUrl && (
                   <div className="mt-4 overflow-hidden rounded-2xl border border-[#d3e4fe]">
@@ -300,7 +310,7 @@ export default function UploadPage() {
                 </Alert>
               )}
 
-              <div className="flex flex-wrap items-center justify-center gap-6 pt-2">
+              <div className="flex flex-col-reverse items-center gap-4 pt-2 sm:flex-row sm:justify-between">
                 <Link
                   className="inline-flex items-center rounded-full border border-[#e4ebff] bg-white px-5 py-2 text-sm font-semibold text-[#0b1c30] shadow-sm transition hover:border-[#c8d6ff] hover:shadow-md"
                   href="/"
