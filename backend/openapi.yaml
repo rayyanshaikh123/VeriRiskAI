@@ -1,0 +1,754 @@
+openapi: 3.1.0
+info:
+  title: VerifyIQ API
+  version: 1.0.0
+paths:
+  /v1/verify/start:
+    post:
+      tags:
+      - verify
+      summary: Start Verification
+      operationId: start_verification_v1_verify_start_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyStartRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyStartEnvelope'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/verify/frame:
+    post:
+      tags:
+      - verify
+      summary: Submit Frame
+      operationId: submit_frame_v1_verify_frame_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyFrameRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyFrameEnvelope'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/verify/submit:
+    post:
+      tags:
+      - verify
+      summary: Submit Verification
+      operationId: submit_verification_v1_verify_submit_post
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Idempotency-Key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifySubmitRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifySubmitEnvelope'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/admin/sessions:
+    get:
+      tags:
+      - admin
+      summary: List Sessions
+      operationId: list_sessions_v1_admin_sessions_get
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Limit
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+          title: Offset
+      - name: state
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/SessionState'
+          - type: 'null'
+          title: State
+      - name: user_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Id
+      - name: session_type
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/SessionType'
+          - type: 'null'
+          title: Session Type
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSessionsEnvelope'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/admin/audit-log:
+    get:
+      tags:
+      - admin
+      summary: List Audit Logs
+      operationId: list_audit_logs_v1_admin_audit_log_get
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Limit
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+          title: Offset
+      - name: session_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      - name: event_type
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/EventType'
+          - type: 'null'
+          title: Event Type
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogEnvelope'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+components:
+  schemas:
+    AdminSessionSummary:
+      properties:
+        session_id:
+          type: string
+          title: Session Id
+        user_id:
+          type: string
+          title: User Id
+        session_type:
+          $ref: '#/components/schemas/SessionType'
+        state:
+          $ref: '#/components/schemas/SessionState'
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        expires_at:
+          type: string
+          format: date-time
+          title: Expires At
+        last_activity_at:
+          type: string
+          format: date-time
+          title: Last Activity At
+        frame_count:
+          type: integer
+          minimum: 0.0
+          title: Frame Count
+        verdict:
+          anyOf:
+          - $ref: '#/components/schemas/Verdict'
+          - type: 'null'
+      type: object
+      required:
+      - session_id
+      - user_id
+      - session_type
+      - state
+      - created_at
+      - expires_at
+      - last_activity_at
+      - frame_count
+      title: AdminSessionSummary
+    AdminSessionsEnvelope:
+      properties:
+        success:
+          type: boolean
+          title: Success
+        data:
+          anyOf:
+          - $ref: '#/components/schemas/AdminSessionsList'
+          - type: 'null'
+        error:
+          anyOf:
+          - $ref: '#/components/schemas/ErrorResponse'
+          - type: 'null'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+      type: object
+      required:
+      - success
+      - meta
+      title: AdminSessionsEnvelope
+    AdminSessionsList:
+      properties:
+        sessions:
+          items:
+            $ref: '#/components/schemas/AdminSessionSummary'
+          type: array
+          title: Sessions
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+      type: object
+      required:
+      - sessions
+      - pagination
+      title: AdminSessionsList
+    AuditLogEntry:
+      properties:
+        event_id:
+          type: string
+          title: Event Id
+        session_id:
+          type: string
+          title: Session Id
+        event_type:
+          $ref: '#/components/schemas/EventType'
+        event_time:
+          type: string
+          format: date-time
+          title: Event Time
+        actor:
+          type: string
+          title: Actor
+        details:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Details
+        hash:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Hash
+        prev_hash:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Prev Hash
+      type: object
+      required:
+      - event_id
+      - session_id
+      - event_type
+      - event_time
+      - actor
+      title: AuditLogEntry
+    AuditLogEnvelope:
+      properties:
+        success:
+          type: boolean
+          title: Success
+        data:
+          anyOf:
+          - $ref: '#/components/schemas/AuditLogList'
+          - type: 'null'
+        error:
+          anyOf:
+          - $ref: '#/components/schemas/ErrorResponse'
+          - type: 'null'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+      type: object
+      required:
+      - success
+      - meta
+      title: AuditLogEnvelope
+    AuditLogList:
+      properties:
+        entries:
+          items:
+            $ref: '#/components/schemas/AuditLogEntry'
+          type: array
+          title: Entries
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+      type: object
+      required:
+      - entries
+      - pagination
+      title: AuditLogList
+    ChallengePrompt:
+      properties:
+        type:
+          $ref: '#/components/schemas/ChallengeType'
+        value:
+          anyOf:
+          - type: string
+          - type: integer
+          title: Value
+        expires_at:
+          type: string
+          format: date-time
+          title: Expires At
+      type: object
+      required:
+      - type
+      - value
+      - expires_at
+      title: ChallengePrompt
+    ChallengeType:
+      type: string
+      enum:
+      - blink
+      - head_turn
+      - smile
+      - number
+      title: ChallengeType
+    ErrorCode:
+      type: string
+      enum:
+      - VALIDATION_ERROR
+      - SESSION_NOT_FOUND
+      - SESSION_EXPIRED
+      - INVALID_FRAME
+      - INVALID_IMAGE
+      - RATE_LIMITED
+      - UNAUTHORIZED
+      - FORBIDDEN
+      - INTERNAL_ERROR
+      - IDEMPOTENCY_CONFLICT
+      title: ErrorCode
+    ErrorResponse:
+      properties:
+        error_code:
+          $ref: '#/components/schemas/ErrorCode'
+        message:
+          type: string
+          title: Message
+        details:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Details
+      type: object
+      required:
+      - error_code
+      - message
+      title: ErrorResponse
+    EventType:
+      type: string
+      enum:
+      - SESSION_CREATED
+      - FRAME_RECEIVED
+      - CHALLENGE_PASSED
+      - SUBMITTED
+      - COMPLETED
+      - EXPIRED
+      title: EventType
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    HeatmapArtifact:
+      properties:
+        url:
+          type: string
+          title: Url
+        expires_at:
+          type: string
+          format: date-time
+          title: Expires At
+        mime_type:
+          type: string
+          title: Mime Type
+      type: object
+      required:
+      - url
+      - expires_at
+      - mime_type
+      title: HeatmapArtifact
+    Pagination:
+      properties:
+        limit:
+          type: integer
+          maximum: 200.0
+          minimum: 1.0
+          title: Limit
+        offset:
+          type: integer
+          minimum: 0.0
+          title: Offset
+        total:
+          type: integer
+          minimum: 0.0
+          title: Total
+      type: object
+      required:
+      - limit
+      - offset
+      - total
+      title: Pagination
+    ResponseMeta:
+      properties:
+        request_id:
+          type: string
+          title: Request Id
+        timestamp:
+          type: string
+          format: date-time
+          title: Timestamp
+      type: object
+      required:
+      - request_id
+      - timestamp
+      title: ResponseMeta
+    SessionState:
+      type: string
+      enum:
+      - CREATED
+      - IN_PROGRESS
+      - CHALLENGE_PASSED
+      - SUBMITTED
+      - COMPLETED
+      - EXPIRED
+      title: SessionState
+    SessionType:
+      type: string
+      enum:
+      - photo
+      - video
+      title: SessionType
+    SignalBreakdown:
+      properties:
+        face_match_score:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Face Match Score
+        liveness_score:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Liveness Score
+        spatial_fake_score:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Spatial Fake Score
+        frequency_fake_score:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Frequency Fake Score
+        temporal_score:
+          anyOf:
+          - type: number
+            maximum: 1.0
+            minimum: 0.0
+          - type: 'null'
+          title: Temporal Score
+        clip_score:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Clip Score
+        behavioral_score:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Behavioral Score
+        challenge_score:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Challenge Score
+      type: object
+      required:
+      - face_match_score
+      - liveness_score
+      - spatial_fake_score
+      - frequency_fake_score
+      - clip_score
+      - behavioral_score
+      - challenge_score
+      title: SignalBreakdown
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+    Verdict:
+      type: string
+      enum:
+      - ACCEPT
+      - REVIEW
+      - REJECT
+      title: Verdict
+    VerifyFrameEnvelope:
+      properties:
+        success:
+          type: boolean
+          title: Success
+        data:
+          anyOf:
+          - $ref: '#/components/schemas/VerifyFrameResponse'
+          - type: 'null'
+        error:
+          anyOf:
+          - $ref: '#/components/schemas/ErrorResponse'
+          - type: 'null'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+      type: object
+      required:
+      - success
+      - meta
+      title: VerifyFrameEnvelope
+    VerifyFrameRequest:
+      properties:
+        session_id:
+          type: string
+          title: Session Id
+        frame_b64:
+          type: string
+          title: Frame B64
+        frame_index:
+          type: integer
+          minimum: 0.0
+          title: Frame Index
+      type: object
+      required:
+      - session_id
+      - frame_b64
+      - frame_index
+      title: VerifyFrameRequest
+    VerifyFrameResponse:
+      properties:
+        liveness_score:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Liveness Score
+        face_detected:
+          type: boolean
+          title: Face Detected
+        challenge_passed:
+          type: boolean
+          title: Challenge Passed
+      type: object
+      required:
+      - liveness_score
+      - face_detected
+      - challenge_passed
+      title: VerifyFrameResponse
+    VerifyStartEnvelope:
+      properties:
+        success:
+          type: boolean
+          title: Success
+        data:
+          anyOf:
+          - $ref: '#/components/schemas/VerifyStartResponse'
+          - type: 'null'
+        error:
+          anyOf:
+          - $ref: '#/components/schemas/ErrorResponse'
+          - type: 'null'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+      type: object
+      required:
+      - success
+      - meta
+      title: VerifyStartEnvelope
+    VerifyStartRequest:
+      properties:
+        user_id:
+          type: string
+          title: User Id
+        session_type:
+          $ref: '#/components/schemas/SessionType'
+      type: object
+      required:
+      - user_id
+      - session_type
+      title: VerifyStartRequest
+    VerifyStartResponse:
+      properties:
+        session_id:
+          type: string
+          title: Session Id
+        challenges:
+          items:
+            $ref: '#/components/schemas/ChallengePrompt'
+          type: array
+          title: Challenges
+      type: object
+      required:
+      - session_id
+      - challenges
+      title: VerifyStartResponse
+    VerifySubmitEnvelope:
+      properties:
+        success:
+          type: boolean
+          title: Success
+        data:
+          anyOf:
+          - $ref: '#/components/schemas/VerifySubmitResponse'
+          - type: 'null'
+        error:
+          anyOf:
+          - $ref: '#/components/schemas/ErrorResponse'
+          - type: 'null'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+      type: object
+      required:
+      - success
+      - meta
+      title: VerifySubmitEnvelope
+    VerifySubmitRequest:
+      properties:
+        session_id:
+          type: string
+          title: Session Id
+        id_image_b64:
+          type: string
+          title: Id Image B64
+      type: object
+      required:
+      - session_id
+      - id_image_b64
+      title: VerifySubmitRequest
+    VerifySubmitResponse:
+      properties:
+        verdict:
+          $ref: '#/components/schemas/Verdict'
+        confidence:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Confidence
+        heatmap:
+          anyOf:
+          - $ref: '#/components/schemas/HeatmapArtifact'
+          - type: 'null'
+        signals:
+          $ref: '#/components/schemas/SignalBreakdown'
+        session_id:
+          type: string
+          title: Session Id
+      type: object
+      required:
+      - verdict
+      - confidence
+      - heatmap
+      - signals
+      - session_id
+      title: VerifySubmitResponse
