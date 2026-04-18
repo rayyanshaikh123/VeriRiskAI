@@ -2,11 +2,11 @@
   --hue: 27;
   --sat: 69%;
   --white: hsl(0, 0%, 100%);
-  --purple-primary: rgba(132, 0, 255, 1);
-  --purple-glow: rgba(132, 0, 255, 0.2);
-  --purple-border: rgba(132, 0, 255, 0.8);
-  --border-color: #2F293A;
-  --background-dark: #120F17;
+  --purple-primary: rgba(15, 23, 42, 0.9);
+  --purple-glow: rgba(15, 23, 42, 0.08);
+  --purple-border: rgba(148, 163, 184, 0.35);
+  --border-color: #e2e8f0;
+  --background-dark: #ffffff;
   color-scheme: light dark;
 }
 
@@ -165,8 +165,8 @@
   padding: 6px;
   background: radial-gradient(
     var(--glow-radius) circle at var(--glow-x) var(--glow-y),
-    rgba(132, 0, 255, calc(var(--glow-intensity) * 0.8)) 0%,
-    rgba(132, 0, 255, calc(var(--glow-intensity) * 0.4)) 30%,
+    rgba(15, 23, 42, calc(var(--glow-intensity) * 0.16)) 0%,
+    rgba(15, 23, 42, calc(var(--glow-intensity) * 0.08)) 30%,
     transparent 60%
   );
   border-radius: inherit;
@@ -190,8 +190,8 @@
 
 .magic-bento-card--border-glow:hover {
   box-shadow:
-    0 4px 20px rgba(46, 24, 78, 0.4),
-    0 0 30px var(--purple-glow);
+    0 6px 18px rgba(15, 23, 42, 0.12),
+    0 0 24px var(--purple-glow);
 }
 
 .particle-container {
