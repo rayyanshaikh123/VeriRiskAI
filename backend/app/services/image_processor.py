@@ -74,7 +74,7 @@ class ImageProcessor:
             self._frequency_detector.detect(roi_bytes).get("score", 0.0)
         )
         artifact = self._artifact_analyzer.analyze(roi, face_box if face_box else None)
-        watermark = self._watermark_detector.detect(roi)
+        watermark = self._watermark_detector.analyze(roi)
 
         self._logger.info(
             "Signal outputs: %s",
@@ -84,6 +84,7 @@ class ImageProcessor:
                 "artifact_score": artifact.get("score"),
                 "artifact_flag": artifact.get("artifact_flag"),
                 "watermark_detected": watermark.get("watermark_detected"),
+                "watermark_score": watermark.get("watermark_score"),
             },
         )
 
@@ -94,4 +95,5 @@ class ImageProcessor:
             "artifact_flag": bool(artifact.get("artifact_flag", False)),
             "artifact_score": float(artifact.get("score", 0.0)),
             "watermark_detected": bool(watermark.get("watermark_detected", False)),
+            "watermark_score": float(watermark.get("watermark_score", 0.0)),
         }

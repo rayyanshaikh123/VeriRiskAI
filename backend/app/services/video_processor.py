@@ -9,6 +9,7 @@ import numpy as np
 
 from app.core.config import settings
 from app.services.artifact_analyzer import ArtifactAnalyzer
+from app.services.behavioral_analyzer import BehavioralAnalyzer
 from app.services.frequency_detector import FrequencyDetector
 from app.services.spatial_detector import SpatialDetector
 from app.services.temporal_detector import TemporalDetector
@@ -27,6 +28,7 @@ class VideoProcessor:
         self._frequency_detector = frequency_detector
         self._temporal_detector = temporal_detector
         self._artifact_analyzer = ArtifactAnalyzer()
+        self._behavioral_analyzer = BehavioralAnalyzer()
         self._watermark_detector = WatermarkDetector()
         self._logger = logging.getLogger("video_processor")
 
@@ -82,6 +84,7 @@ class VideoProcessor:
         artifact_scores: List[float] = []
         artifact_flags: List[bool] = []
         watermark_flags: List[bool] = []
+        watermark_scores: List[float] = []
         frame_bytes: List[bytes] = []
 
         for frame in frames:
@@ -103,13 +106,17 @@ class VideoProcessor:
             artifact_scores.append(float(artifact.get("score", 0.0)))
             artifact_flags.append(bool(artifact.get("artifact_flag", False)))
 
-            watermark = self._watermark_detector.detect(resized)
+            watermark = self._watermark_detector.analyze(resized)
             watermark_flags.append(bool(watermark.get("watermark_detected", False)))
+            watermark_scores.append(float(watermark.get("watermark_score", 0.0)))
 
         spatial_avg = float(np.mean(spatial_scores))
         frequency_avg = float(np.mean(frequency_scores))
         artifact_avg = float(np.mean(artifact_scores))
+        watermark_avg = float(np.mean(watermark_scores)) if watermark_scores else 0.0
         temporal_score = float(self._temporal_detector.detect(frame_bytes).get("score", 0.0))
+        behavioral = self._behavioral_analyzer.analyze(frame_bytes)
+        behavioral_score = float(behavioral.get("score", 0.0))
 
         self._logger.info(
             "Signal outputs: %s",
@@ -120,6 +127,8 @@ class VideoProcessor:
                 "artifact_score": artifact_avg,
                 "artifact_flag": any(artifact_flags),
                 "watermark_detected": any(watermark_flags),
+                "watermark_score": watermark_avg,
+                "behavioral_score": behavioral_score,
             },
         )
 
@@ -130,4 +139,6 @@ class VideoProcessor:
             "artifact_flag": any(artifact_flags),
             "artifact_score": clamp01(artifact_avg),
             "watermark_detected": any(watermark_flags),
+            "watermark_score": clamp01(watermark_avg),
+            "behavioral_score": clamp01(behavioral_score),
         }

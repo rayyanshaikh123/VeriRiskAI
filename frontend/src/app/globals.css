@@ -226,9 +226,11 @@ body {
   gap: 6px;
   padding: 6px;
   border-radius: 9999px;
-  background: transparent;
-  border: 1px solid var(--border);
-  box-shadow: none;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 .master-pill-item {
@@ -254,7 +256,7 @@ body {
 
 .master-pill-item:hover {
   color: var(--text);
-  background: rgba(15, 23, 42, 0.06);
+  background: rgba(15, 23, 42, 0.08);
 }
 
 .master-pill-item.is-active {
@@ -273,7 +275,9 @@ body {
 }
 
 .dark .master-pill-nav {
-  border-color: #1f2937;
+  background: rgba(15, 23, 42, 0.58);
+  border-color: rgba(148, 163, 184, 0.2);
+  box-shadow: 0 14px 34px rgba(2, 6, 23, 0.55);
 }
 
 .dark .master-pill-item {
