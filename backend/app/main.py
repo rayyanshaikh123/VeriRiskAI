@@ -1,3 +1,4 @@
+import logging
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Request
@@ -6,13 +7,17 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api.v1.admin import router as admin_router
 from app.api.v1.verify import router as verify_router
 from app.core.config import settings
 from app.schemas.common import ErrorCode
 from app.utils.response import error_envelope
 
 app = FastAPI(title="VerifyIQ API", version="1.0.0")
+
+logging.basicConfig(
+    level=getattr(logging, settings.log_level.upper(), logging.INFO),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(settings.cors_allowed_origins),
@@ -21,7 +26,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(verify_router, prefix="/v1")
-app.include_router(admin_router, prefix="/v1")
 
 
 @app.middleware("http")

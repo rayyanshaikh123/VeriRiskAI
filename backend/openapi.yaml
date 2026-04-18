@@ -28,274 +28,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /v1/admin/sessions:
-    get:
-      tags:
-      - admin
-      summary: List Sessions
-      operationId: list_sessions_v1_admin_sessions_get
-      parameters:
-      - name: limit
-        in: query
-        required: false
-        schema:
-          type: integer
-          maximum: 200
-          minimum: 1
-          default: 50
-          title: Limit
-      - name: offset
-        in: query
-        required: false
-        schema:
-          type: integer
-          minimum: 0
-          default: 0
-          title: Offset
-      - name: state
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - $ref: '#/components/schemas/SessionState'
-          - type: 'null'
-          title: State
-      - name: user_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: User Id
-      - name: session_type
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - $ref: '#/components/schemas/SessionType'
-          - type: 'null'
-          title: Session Type
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminSessionsEnvelope'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-  /v1/admin/audit-log:
-    get:
-      tags:
-      - admin
-      summary: List Audit Logs
-      operationId: list_audit_logs_v1_admin_audit_log_get
-      parameters:
-      - name: limit
-        in: query
-        required: false
-        schema:
-          type: integer
-          maximum: 200
-          minimum: 1
-          default: 50
-          title: Limit
-      - name: offset
-        in: query
-        required: false
-        schema:
-          type: integer
-          minimum: 0
-          default: 0
-          title: Offset
-      - name: session_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Session Id
-      - name: event_type
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - $ref: '#/components/schemas/EventType'
-          - type: 'null'
-          title: Event Type
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuditLogEnvelope'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
 components:
   schemas:
-    AdminSessionSummary:
-      properties:
-        session_id:
-          type: string
-          title: Session Id
-        user_id:
-          type: string
-          title: User Id
-        session_type:
-          $ref: '#/components/schemas/SessionType'
-        state:
-          $ref: '#/components/schemas/SessionState'
-        created_at:
-          type: string
-          format: date-time
-          title: Created At
-        expires_at:
-          type: string
-          format: date-time
-          title: Expires At
-        last_activity_at:
-          type: string
-          format: date-time
-          title: Last Activity At
-        frame_count:
-          type: integer
-          minimum: 0.0
-          title: Frame Count
-        verdict:
-          anyOf:
-          - $ref: '#/components/schemas/Verdict'
-          - type: 'null'
-      type: object
-      required:
-      - session_id
-      - user_id
-      - session_type
-      - state
-      - created_at
-      - expires_at
-      - last_activity_at
-      - frame_count
-      title: AdminSessionSummary
-    AdminSessionsEnvelope:
-      properties:
-        success:
-          type: boolean
-          title: Success
-        data:
-          anyOf:
-          - $ref: '#/components/schemas/AdminSessionsList'
-          - type: 'null'
-        error:
-          anyOf:
-          - $ref: '#/components/schemas/ErrorResponse'
-          - type: 'null'
-        meta:
-          $ref: '#/components/schemas/ResponseMeta'
-      type: object
-      required:
-      - success
-      - meta
-      title: AdminSessionsEnvelope
-    AdminSessionsList:
-      properties:
-        sessions:
-          items:
-            $ref: '#/components/schemas/AdminSessionSummary'
-          type: array
-          title: Sessions
-        pagination:
-          $ref: '#/components/schemas/Pagination'
-      type: object
-      required:
-      - sessions
-      - pagination
-      title: AdminSessionsList
-    AuditLogEntry:
-      properties:
-        event_id:
-          type: string
-          title: Event Id
-        session_id:
-          type: string
-          title: Session Id
-        event_type:
-          $ref: '#/components/schemas/EventType'
-        event_time:
-          type: string
-          format: date-time
-          title: Event Time
-        actor:
-          type: string
-          title: Actor
-        details:
-          anyOf:
-          - additionalProperties: true
-            type: object
-          - type: 'null'
-          title: Details
-        hash:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Hash
-        prev_hash:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Prev Hash
-      type: object
-      required:
-      - event_id
-      - session_id
-      - event_type
-      - event_time
-      - actor
-      title: AuditLogEntry
-    AuditLogEnvelope:
-      properties:
-        success:
-          type: boolean
-          title: Success
-        data:
-          anyOf:
-          - $ref: '#/components/schemas/AuditLogList'
-          - type: 'null'
-        error:
-          anyOf:
-          - $ref: '#/components/schemas/ErrorResponse'
-          - type: 'null'
-        meta:
-          $ref: '#/components/schemas/ResponseMeta'
-      type: object
-      required:
-      - success
-      - meta
-      title: AuditLogEnvelope
-    AuditLogList:
-      properties:
-        entries:
-          items:
-            $ref: '#/components/schemas/AuditLogEntry'
-          type: array
-          title: Entries
-        pagination:
-          $ref: '#/components/schemas/Pagination'
-      type: object
-      required:
-      - entries
-      - pagination
-      title: AuditLogList
     ErrorCode:
       type: string
       enum:
@@ -329,16 +63,6 @@ components:
       - error_code
       - message
       title: ErrorResponse
-    EventType:
-      type: string
-      enum:
-      - SESSION_CREATED
-      - FRAME_RECEIVED
-      - CHALLENGE_PASSED
-      - SUBMITTED
-      - COMPLETED
-      - EXPIRED
-      title: EventType
     HTTPValidationError:
       properties:
         detail:
@@ -348,27 +72,12 @@ components:
           title: Detail
       type: object
       title: HTTPValidationError
-    Pagination:
-      properties:
-        limit:
-          type: integer
-          maximum: 200.0
-          minimum: 1.0
-          title: Limit
-        offset:
-          type: integer
-          minimum: 0.0
-          title: Offset
-        total:
-          type: integer
-          minimum: 0.0
-          title: Total
-      type: object
-      required:
-      - limit
-      - offset
-      - total
-      title: Pagination
+    InputType:
+      type: string
+      enum:
+      - image
+      - video
+      title: InputType
     ResponseMeta:
       properties:
         request_id:
@@ -383,22 +92,6 @@ components:
       - request_id
       - timestamp
       title: ResponseMeta
-    SessionState:
-      type: string
-      enum:
-      - CREATED
-      - IN_PROGRESS
-      - CHALLENGE_PASSED
-      - SUBMITTED
-      - COMPLETED
-      - EXPIRED
-      title: SessionState
-    SessionType:
-      type: string
-      enum:
-      - photo
-      - video
-      title: SessionType
     SignalBreakdown:
       properties:
         spatial_fake_score:
@@ -418,11 +111,38 @@ components:
             minimum: 0.0
           - type: 'null'
           title: Temporal Score
+        behavioral_score:
+          anyOf:
+          - type: number
+            maximum: 1.0
+            minimum: 0.0
+          - type: 'null'
+          title: Behavioral Score
       type: object
       required:
       - spatial_fake_score
       - frequency_fake_score
       title: SignalBreakdown
+    SignalFlags:
+      properties:
+        artifact_flag:
+          type: boolean
+          title: Artifact Flag
+          default: false
+        frequency_anomaly:
+          type: boolean
+          title: Frequency Anomaly
+          default: false
+        temporal_inconsistency:
+          type: boolean
+          title: Temporal Inconsistency
+          default: false
+        watermark_detected:
+          type: boolean
+          title: Watermark Detected
+          default: false
+      type: object
+      title: SignalFlags
     ValidationError:
       properties:
         loc:
@@ -456,12 +176,6 @@ components:
       - REVIEW
       - REJECT
       title: Verdict
-    InputType:
-      type: string
-      enum:
-      - image
-      - video
-      title: InputType
     VerifyUploadEnvelope:
       properties:
         success:
@@ -509,9 +223,12 @@ components:
           title: Confidence
         signals:
           $ref: '#/components/schemas/SignalBreakdown'
+        flags:
+          $ref: '#/components/schemas/SignalFlags'
       type: object
       required:
       - verdict
       - confidence
       - signals
+      - flags
       title: VerifyUploadResponse
