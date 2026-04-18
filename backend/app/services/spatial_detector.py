@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import cv2
 import numpy as np
@@ -18,10 +18,22 @@ _STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 
 
 class SpatialDetector:
+    """
+    CNN-based spatial deepfake detector using an Xception backbone.
+
+    Two operating modes:
+      - detect()           → full classification head → fake probability score
+      - extract_embedding() → removes classification head → raw feature vector
+                              (used as LSTM input for temporal modeling)
+    """
+
     def __init__(self) -> None:
         self._logger = logging.getLogger("spatial_detector")
         self._model: Optional[nn.Module] = None
         self._device = torch.device("cpu")
+        # Feature extractor: same backbone but with the FC head replaced by Identity
+        self._feature_extractor: Optional[nn.Module] = None
+        self._embedding_dim: int = 2048  # Xception pool5 output dim
 
     def _ensure_model(self) -> None:
         if self._model is not None:
@@ -33,9 +45,10 @@ class SpatialDetector:
             return
 
         try:
+            # --- Full classification model (for detect()) ---
             model = timm.create_model("legacy_xception", pretrained=False)
             model.fc = nn.Linear(model.fc.in_features, 1)
-            state = torch.load(model_path, map_location=self._device)
+            state = torch.load(model_path, map_location=self._device, weights_only=False)
             state_dict = state.get("state_dict", state) if isinstance(state, dict) else state
             cleaned: dict[str, torch.Tensor] = {}
             for key, value in state_dict.items():
@@ -52,9 +65,22 @@ class SpatialDetector:
             model.to(self._device)
             model.eval()
             self._model = model
+
+            # --- Feature extractor (for extract_embedding()) ---
+            # Same weights, but final FC replaced with Identity so we get the
+            # raw pooled feature vector (2048-dim for Xception).
+            feature_model = timm.create_model("legacy_xception", pretrained=False)
+            feature_model.fc = nn.Identity()  # remove classification head
+            feature_model.load_state_dict(cleaned, strict=False)
+            feature_model.to(self._device)
+            feature_model.eval()
+            self._feature_extractor = feature_model
+            self._logger.info("Spatial model loaded from '%s'", model_path)
+
         except Exception as exc:
             self._logger.warning("Failed to load spatial model: %s", exc)
             self._model = None
+            self._feature_extractor = None
 
     def _preprocess(self, frame: bytes) -> Optional[np.ndarray]:
         data = np.frombuffer(frame, dtype=np.uint8)
@@ -100,3 +126,45 @@ class SpatialDetector:
             return {"score": 0.5}
 
         return {"score": float(score)}
+
+    def extract_embedding(self, frame: bytes) -> Optional[np.ndarray]:
+        """
+        Extract a raw CNN feature vector from a single frame.
+
+        This is the LSTM pipeline entry point: instead of a final fake/real
+        score, we return the 2048-dim pooled feature map so the LSTM can
+        learn temporal patterns across the sequence.
+
+        Args:
+            frame: JPEG-encoded frame bytes.
+
+        Returns:
+            1-D float32 numpy array of shape (embedding_dim,), or None on failure.
+        """
+        self._ensure_model()
+        if self._feature_extractor is None:
+            # No model loaded — return a zero vector as a neutral placeholder
+            return np.zeros(self._embedding_dim, dtype=np.float32)
+
+        tensor = self._preprocess(frame)
+        if tensor is None:
+            return np.zeros(self._embedding_dim, dtype=np.float32)
+
+        try:
+            input_tensor = torch.from_numpy(tensor).to(self._device)
+            with torch.inference_mode():
+                embedding = self._feature_extractor(input_tensor)  # (1, D) or (1, D, 1, 1)
+
+            # Flatten to 1-D
+            emb_np = embedding.detach().cpu().numpy().reshape(-1).astype(np.float32)
+
+            # L2-normalise the embedding for better LSTM conditioning
+            norm = np.linalg.norm(emb_np)
+            if norm > 1e-6:
+                emb_np = emb_np / norm
+
+            return emb_np
+
+        except Exception as exc:
+            self._logger.warning("Embedding extraction failed: %s", exc)
+            return np.zeros(self._embedding_dim, dtype=np.float32)

@@ -10,3 +10,5 @@ insightface
 onnxruntime
 timm
 torch
+mediapipe        # Face landmark detection for heuristic analysis (blink, lip-sync)
+joblib           # Optional: load XGBoost fusion model

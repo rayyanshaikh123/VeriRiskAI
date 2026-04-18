@@ -7,6 +7,11 @@ import numpy as np
 from app.core.config import settings
 from app.utils.normalization import clamp01
 
+# Risk level labels keyed by threshold
+_RISK_HIGH = "HIGH"
+_RISK_MEDIUM = "MEDIUM"
+_RISK_LOW = "LOW"
+
 
 class FusionEngine:
     def __init__(self) -> None:
@@ -88,4 +93,91 @@ class FusionEngine:
             "risk_score": float(risk_score),
             "verdict": verdict,
             "confidence": float(confidence),
+        }
+
+    # ------------------------------------------------------------------
+    # Video-specific fusion (LSTM + CNN + Heuristics)
+    # ------------------------------------------------------------------
+
+    def video_fuse(
+        self,
+        cnn_score: float,
+        lstm_score: float,
+        heuristic_score: float,
+        lstm_model_loaded: bool = False,
+    ) -> Dict[str, object]:
+        """
+        Fuse CNN, LSTM, and heuristic scores into a final video verdict.
+
+        Formula (weights configurable via config.py)::
+
+            final_score = w_cnn * cnn_score
+                        + w_lstm * lstm_score
+                        + w_heuristic * heuristic_score
+
+        Risk levels:
+            > risk_high_threshold   (default 0.70) → HIGH   / REJECT
+            > risk_medium_threshold (default 0.40) → MEDIUM / REVIEW
+            <= risk_medium_threshold               → LOW    / ACCEPT
+
+        Args:
+            cnn_score:       Frame-averaged CNN fake-probability (0–1).
+            lstm_score:      LSTM temporal model score (0–1).
+            heuristic_score: Behavioral heuristic score (0–1).
+
+        Returns:
+            dict with keys:
+                final_score (float)   — overall deepfake probability
+                verdict     (str)     — ACCEPT / REVIEW / REJECT
+                confidence  (float)   — 1 − final_score
+                risk_level  (str)     — LOW / MEDIUM / HIGH
+                components  (dict)    — individual input scores + weights used
+        """
+        if lstm_model_loaded:
+            w_cnn = 0.35
+            w_lstm = 0.40
+            w_heuristic = 0.25
+        else:
+            w_cnn = 0.70
+            w_lstm = 0.00
+            w_heuristic = 0.30
+
+        cnn_score = clamp01(cnn_score)
+        lstm_score = clamp01(lstm_score)
+        heuristic_score = clamp01(heuristic_score)
+
+        final_score = clamp01(
+            w_cnn * cnn_score
+            + w_lstm * lstm_score
+            + w_heuristic * heuristic_score
+        )
+
+        # --- Verdict ---
+        if final_score < 0.45:
+            verdict = "REAL"
+            risk_level = _RISK_LOW
+        elif final_score > 0.65:
+            verdict = "FAKE"
+            risk_level = _RISK_HIGH
+        else:
+            verdict = "REVIEW"
+            risk_level = _RISK_MEDIUM
+
+        confidence = clamp01(1.0 - final_score)
+
+        return {
+            "final_score": float(final_score),
+            "verdict": verdict,
+            "confidence": float(confidence),
+            "risk_level": risk_level,
+            "components": {
+                "cnn_score": float(cnn_score),
+                "lstm_score": float(lstm_score),
+                "heuristic_score": float(heuristic_score),
+                "weights": {
+                    "cnn": round(w_cnn, 4),
+                    "lstm": round(w_lstm, 4),
+                    "heuristic": round(w_heuristic, 4),
+                },
+            },
         }

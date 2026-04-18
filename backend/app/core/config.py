@@ -23,5 +23,23 @@ class Settings(BaseModel):
         "http://127.0.0.1:3000",
     )
 
+    # ------------------------------------------------------------------ #
+    # Advanced video pipeline settings                                     #
+    # ------------------------------------------------------------------ #
+
+    # Path to trained LSTM weights (.pth or .pt checkpoint file).
+    # If None or file not found, the LSTM returns a neutral score (0.5).
+    lstm_model_path: str | None = os.getenv("LSTM_MODEL_PATH")
+
+    # Score fusion weights for video analysis (must sum to 1.0)
+    video_cnn_weight: float = 0.50       # frame-level CNN average score
+    video_lstm_weight: float = 0.30      # LSTM temporal sequence score
+    video_heuristic_weight: float = 0.20  # heuristic behavioral score
+
+    # Risk level thresholds (applied to the fused final score)
+    risk_high_threshold: float = 0.70
+    risk_medium_threshold: float = 0.40
+
 
 settings = Settings()
+

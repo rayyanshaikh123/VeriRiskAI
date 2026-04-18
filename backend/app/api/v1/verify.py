@@ -16,8 +16,8 @@ from app.services.face_extractor import FaceExtractor
 from app.services.frequency_detector import FrequencyDetector
 from app.services.fusion_engine import FusionEngine
 from app.services.image_processor import ImageProcessor
+from app.services.lstm_model import LSTMTemporalDetector
 from app.services.spatial_detector import SpatialDetector
-from app.services.temporal_detector import TemporalDetector
 from app.services.video_processor import VideoProcessor
 from app.utils.errors import raise_api_error
 from app.utils.response import success_envelope
@@ -33,9 +33,9 @@ router = APIRouter(prefix="/verify", tags=["verify"])
 _face_extractor = FaceExtractor()
 _spatial_detector = SpatialDetector()
 _frequency_detector = FrequencyDetector()
-_temporal_detector = TemporalDetector()
+_lstm_detector = LSTMTemporalDetector()   # LSTM temporal model
 _image_processor = ImageProcessor(_face_extractor, _spatial_detector, _frequency_detector)
-_video_processor = VideoProcessor(_spatial_detector, _frequency_detector, _temporal_detector)
+_video_processor = VideoProcessor(_spatial_detector, _frequency_detector, _lstm_detector)
 _fusion_engine = FusionEngine()
 _logger = logging.getLogger("verify_pipeline")
 
@@ -108,6 +108,7 @@ async def upload_verification(request: Request, body: VerifyUploadRequest):
         },
     )
 
+    # Build SignalBreakdown — include new advanced fields for video inputs
     signals = SignalBreakdown(
         spatial_fake_score=_clamp(raw_signals.get("spatial_fake_score", 0.0)),
         frequency_fake_score=_clamp(raw_signals.get("frequency_fake_score", 0.0)),
@@ -119,6 +120,37 @@ async def upload_verification(request: Request, body: VerifyUploadRequest):
         behavioral_score=(
             _clamp(raw_signals["behavioral_score"])
             if raw_signals.get("behavioral_score") is not None
+            else None
+        ),
+        # Advanced video-only signal fields (None for image inputs)
+        cnn_score=(
+            _clamp(raw_signals["cnn_score"])
+            if body.input_type == InputType.video and raw_signals.get("cnn_score") is not None
+            else None
+        ),
+        lstm_score=(
+            _clamp(raw_signals["lstm_score"])
+            if body.input_type == InputType.video and raw_signals.get("lstm_score") is not None
+            else None
+        ),
+        heuristic_score=(
+            _clamp(raw_signals["heuristic_score"])
+            if body.input_type == InputType.video and raw_signals.get("heuristic_score") is not None
+            else None
+        ),
+        blink_score=(
+            _clamp(raw_signals["blink_score"])
+            if body.input_type == InputType.video and raw_signals.get("blink_score") is not None
+            else None
+        ),
+        lip_score=(
+            _clamp(raw_signals["lip_score"])
+            if body.input_type == InputType.video and raw_signals.get("lip_score") is not None
+            else None
+        ),
+        frame_diff_score=(
+            _clamp(raw_signals["frame_diff_score"])
+            if body.input_type == InputType.video and raw_signals.get("frame_diff_score") is not None
             else None
         ),
     )
@@ -133,14 +165,22 @@ async def upload_verification(request: Request, body: VerifyUploadRequest):
         watermark_detected=bool(raw_signals.get("watermark_detected", False)),
     )
 
-    fusion_payload = signals.model_dump() | {
-        "artifact_score": raw_signals.get("artifact_score", 0.0),
-        "watermark_detected": flags.watermark_detected,
-        "watermark_score": raw_signals.get("watermark_score", 0.0),
-    }
-    fusion_result = _fusion_engine.fuse(fusion_payload)
-    confidence = _clamp(fusion_result.get("confidence", 0.5))
-    verdict_value = fusion_result.get("verdict")
+    # For video: use the pre-computed fusion result from VideoProcessor.
+    # For image: run the existing weighted fusion via FusionEngine.fuse().
+    if body.input_type == InputType.video and "verdict" in raw_signals:
+        # VideoProcessor already ran video_fuse() internally
+        verdict_value = raw_signals.get("verdict")
+        confidence = _clamp(raw_signals.get("confidence", 0.5))
+    else:
+        fusion_payload = signals.model_dump() | {
+            "artifact_score": raw_signals.get("artifact_score", 0.0),
+            "watermark_detected": flags.watermark_detected,
+            "watermark_score": raw_signals.get("watermark_score", 0.0),
+        }
+        fusion_result = _fusion_engine.fuse(fusion_payload)
+        confidence = _clamp(fusion_result.get("confidence", 0.5))
+        verdict_value = fusion_result.get("verdict")
+
     if isinstance(verdict_value, str) and verdict_value in Verdict._value2member_map_:
         verdict = Verdict(verdict_value)
     else:
@@ -151,5 +191,17 @@ async def upload_verification(request: Request, body: VerifyUploadRequest):
         confidence=confidence,
         signals=signals,
         flags=flags,
+        # Advanced video-only fields (None for image)
+        risk_level=raw_signals.get("risk_level") if body.input_type == InputType.video else None,
+        final_score=(
+            float(raw_signals["final_score"])
+            if body.input_type == InputType.video and "final_score" in raw_signals
+            else None
+        ),
+        fusion_components=(
+            raw_signals.get("fusion_components")
+            if body.input_type == InputType.video
+            else None
+        ),
     )
     return success_envelope(request, data)
