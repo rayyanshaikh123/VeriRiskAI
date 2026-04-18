@@ -331,24 +331,13 @@ export default function UploadPage() {
 
   return (
     <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] antialiased">
-      <header className="glass fixed top-0 z-50 w-full bg-white/80 shadow-sm shadow-slate-200/50">
-        <div className="mx-auto flex h-16 w-full max-w-screen-2xl items-center justify-between px-6 md:px-8">
-          <div className="text-lg font-black tracking-tighter text-slate-950">
-            VeriRisk AI
-          </div>
-          <nav className="hidden items-center space-x-8 md:flex">
-            <span className="border-b-2 border-slate-950 pb-1 font-semibold">
-              Verification
-            </span>
-            <span className="text-slate-500">Documents</span>
-            <span className="text-slate-500">Reports</span>
+      <header className="fixed top-0 z-50 w-full">
+        <div className="mx-auto flex h-20 w-full max-w-screen-2xl items-center justify-center px-6 md:px-8">
+          <nav className="master-pill-nav" aria-label="Primary navigation">
+            <Link className="master-pill-item" href="/">Home</Link>
+            <Link className="master-pill-item" href="/#quick-start">Quick Start</Link>
+            <Link className="master-pill-item master-pill-upload is-active" href="/upload">Upload</Link>
           </nav>
-          <Link
-            className="rounded-xl bg-black px-4 py-2 text-sm font-bold text-white"
-            href="/results"
-          >
-            Dashboard
-          </Link>
         </div>
       </header>
 

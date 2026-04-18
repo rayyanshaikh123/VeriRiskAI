@@ -1,9 +1,9 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap");
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap");
 
 :root {
   --surface: #f8f9ff;
@@ -15,7 +15,8 @@
 }
 
 html,
-body {
+body,
+#root {
   margin: 0;
   min-height: 100%;
 }
@@ -37,16 +38,26 @@ body {
 }
 
 .hero-background {
-  background-image: radial-gradient(
-      circle at 85% 10%,
-      rgba(211, 228, 254, 0.7) 0%,
-      rgba(248, 249, 255, 0) 35%
-    ),
-    radial-gradient(
-      circle at 8% 78%,
-      rgba(111, 251, 190, 0.2) 0%,
-      rgba(248, 249, 255, 0) 30%
-    );
+  background-image: radial-gradient(circle at 85% 10%, rgba(211, 228, 254, 0.7) 0%, rgba(248, 249, 255, 0) 35%),
+    radial-gradient(circle at 8% 78%, rgba(111, 251, 190, 0.2) 0%, rgba(248, 249, 255, 0) 30%);
+}
+
+.hero-primary-shell {
+  background: #dbe8ff;
+  border: 1px solid rgba(15, 30, 69, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.hero-primary-canvas {
+  filter: saturate(1.18) contrast(1.06);
+  transform: scale(1.03);
+  transform-origin: center;
+}
+
+.hero-primary-overlay {
+  background:
+    linear-gradient(120deg, rgba(249, 252, 255, 0.9) 6%, rgba(239, 244, 255, 0.72) 42%, rgba(205, 225, 255, 0.54) 100%),
+    radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 44%);
 }
 
 .master-pill-nav {
@@ -123,6 +134,16 @@ body {
 }
 
 @media (max-width: 768px) {
+  .hero-primary-canvas {
+    transform: scale(1.08);
+  }
+
+  .hero-primary-overlay {
+    background:
+      linear-gradient(130deg, rgba(249, 252, 255, 0.92) 8%, rgba(239, 244, 255, 0.76) 48%, rgba(205, 225, 255, 0.6) 100%),
+      radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.52) 0%, rgba(255, 255, 255, 0) 48%);
+  }
+
   .master-pill-nav {
     width: 100%;
     justify-content: space-between;
@@ -139,12 +160,7 @@ body {
 }
 
 .processing-background {
-  background: radial-gradient(
-      circle at 80% 12%,
-      rgba(211, 228, 254, 0.7) 0%,
-      rgba(248, 249, 255, 0) 35%
-    ),
-    #f8f9ff;
+  background: radial-gradient(circle at 80% 12%, rgba(211, 228, 254, 0.7) 0%, rgba(248, 249, 255, 0) 35%), #f8f9ff;
 }
 
 .loader {
