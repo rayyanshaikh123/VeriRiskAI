@@ -201,38 +201,41 @@ export default function UploadPage() {
             </p>
           </header>
 
-          <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-[1.15fr_0.85fr]">
             <div className="space-y-8">
-              <div className="rounded-3xl bg-white p-6 shadow-soft">
-                <div className="grid gap-4 md:grid-cols-[1.2fr_1fr]">
-                  <label className="text-xs font-bold uppercase tracking-[0.2em] text-[#45464d]">
-                    User ID
-                    <input
-                      type="text"
-                      value={userId}
-                      onChange={(event) => setUserId(event.target.value)}
-                      placeholder="e.g. user_12345"
-                      className="mt-2 w-full rounded-2xl border border-[#d3e4fe] bg-white px-4 py-3 text-sm focus:border-black focus:outline-none"
-                    />
-                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
-                      <span className="text-[#57657b]">Demo:</span>
-                      {demoUsers.map((demo) => (
-                        <button
-                          key={demo}
-                          type="button"
-                          onClick={() => setUserId(demo)}
-                          className="rounded-full border border-[#d3e4fe] bg-[#f4f8ff] px-3 py-1 text-[#2f3a4d] transition hover:border-black"
-                        >
-                          {demo}
-                        </button>
-                      ))}
-                    </div>
-                  </label>
-                    <div className="space-y-2">
+              <div className="grid gap-6">
+                <div className="space-y-6">
+                  <div className="rounded-3xl bg-white p-6 shadow-soft">
+                    <label className="text-xs font-bold uppercase tracking-[0.2em] text-[#45464d]">
+                      User ID
+                      <input
+                        type="text"
+                        value={userId}
+                        onChange={(event) => setUserId(event.target.value)}
+                        placeholder="e.g. user_12345"
+                        className="mt-2 w-full rounded-2xl border border-[#d3e4fe] bg-white px-4 py-3 text-sm focus:border-black focus:outline-none"
+                      />
+                      <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
+                        <span className="text-[#57657b]">Demo:</span>
+                        {demoUsers.map((demo) => (
+                          <button
+                            key={demo}
+                            type="button"
+                            onClick={() => setUserId(demo)}
+                            className="rounded-full border border-[#d3e4fe] bg-[#f4f8ff] px-3 py-1 text-[#2f3a4d] transition hover:border-black"
+                          >
+                            {demo}
+                          </button>
+                        ))}
+                      </div>
+                    </label>
+                  </div>
+
+                  <div className="rounded-3xl bg-white p-6 shadow-soft">
                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#45464d]">
                       Input type
                     </p>
-                    <div className="grid gap-2">
+                    <div className="mt-3 grid gap-2">
                       {inputOptions.map((option) => (
                         <button
                           key={option.value}
@@ -245,7 +248,7 @@ export default function UploadPage() {
                               setPreviewUrl(null);
                             }
                           }}
-                            className={`rounded-2xl border px-4 py-3 text-left text-xs font-semibold transition ${
+                          className={`rounded-2xl border px-4 py-3 text-left text-xs font-semibold transition ${
                             inputType === option.value
                               ? "border-black bg-black text-white"
                               : "border-[#d3e4fe] bg-white text-[#57657b]"
@@ -257,50 +260,52 @@ export default function UploadPage() {
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="rounded-[2rem] border border-white/40 bg-white p-6">
-                <h4 className="mb-4 text-sm font-black uppercase tracking-widest text-[#45464d]">
-                  Upload media
-                </h4>
-                <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#d3e4fe] bg-[#f7f9ff] px-6 py-8 text-center text-sm text-[#57657b] transition hover:border-black">
-                  <span className="text-base font-semibold text-[#0b1c30]">
-                    Choose {inputType === "image" ? "a selfie image" : "a short video"}
-                  </span>
-                  <span className="text-xs">
-                    {inputType === "image"
-                      ? "JPEG/PNG up to 2MB."
-                      : "MP4/WEBM/QuickTime up to 15MB."}
-                  </span>
-                  <input
-                    type="file"
-                    accept={
-                      inputType === "image"
-                        ? "image/jpeg,image/png"
-                        : "video/mp4,video/webm,video/quicktime"
-                    }
-                    onChange={handleFileChange}
-                    className="sr-only"
-                  />
-                </label>
+                <div className="space-y-6">
+                  <div className="rounded-[2rem] border border-white/40 bg-white p-6">
+                    <h4 className="mb-4 text-sm font-black uppercase tracking-widest text-[#45464d]">
+                      Upload media
+                    </h4>
+                    <label className="flex min-h-[180px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#d3e4fe] bg-[#f7f9ff] px-6 py-8 text-center text-sm text-[#57657b] transition hover:border-black">
+                      <span className="text-base font-semibold text-[#0b1c30]">
+                        Choose {inputType === "image" ? "a selfie image" : "a short video"}
+                      </span>
+                      <span className="text-xs">
+                        {inputType === "image"
+                          ? "JPEG/PNG up to 2MB."
+                          : "MP4/WEBM/QuickTime up to 15MB."}
+                      </span>
+                      <input
+                        type="file"
+                        accept={
+                          inputType === "image"
+                            ? "image/jpeg,image/png"
+                            : "video/mp4,video/webm,video/quicktime"
+                        }
+                        onChange={handleFileChange}
+                        className="sr-only"
+                      />
+                    </label>
 
-                {previewUrl && (
-                  <div className="mt-4 overflow-hidden rounded-2xl border border-[#d3e4fe]">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={previewUrl}
-                      alt="Selfie preview"
-                      className="h-40 w-full object-cover"
-                    />
+                    {previewUrl && (
+                      <div className="mt-4 overflow-hidden rounded-2xl border border-[#d3e4fe]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={previewUrl}
+                          alt="Selfie preview"
+                          className="h-40 w-full object-cover"
+                        />
+                      </div>
+                    )}
+
+                    {fileMeta && !previewUrl && (
+                      <div className="mt-4 rounded-2xl border border-dashed border-[#c6c6cd] p-4 text-sm text-[#45464d]">
+                        <div className="font-semibold text-[#0b1c30]">{fileMeta.name}</div>
+                        <div className="text-xs">{fileMeta.size}</div>
+                      </div>
+                    )}
                   </div>
-                )}
-
-                {fileMeta && !previewUrl && (
-                  <div className="mt-4 rounded-2xl border border-dashed border-[#c6c6cd] p-4 text-sm text-[#45464d]">
-                    <div className="font-semibold text-[#0b1c30]">{fileMeta.name}</div>
-                    <div className="text-xs">{fileMeta.size}</div>
-                  </div>
-                )}
+                </div>
               </div>
 
               {(localError || error) && (
@@ -312,7 +317,7 @@ export default function UploadPage() {
 
               <div className="flex flex-col-reverse items-center gap-4 pt-2 sm:flex-row sm:justify-between">
                 <Link
-                  className="inline-flex items-center rounded-full border border-[#e4ebff] bg-white px-5 py-2 text-sm font-semibold text-[#0b1c30] shadow-sm transition hover:border-[#c8d6ff] hover:shadow-md"
+                  className="inline-flex w-full items-center justify-center rounded-full border border-[#e4ebff] bg-white px-5 py-2 text-sm font-semibold text-[#0b1c30] shadow-sm transition hover:border-[#c8d6ff] hover:shadow-md sm:w-auto"
                   href="/"
                 >
                   Back to Landing
@@ -321,7 +326,7 @@ export default function UploadPage() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  className={`group flex items-center space-x-4 rounded-xl px-8 py-4 text-lg font-bold transition ${
+                  className={`group flex w-full items-center justify-center space-x-4 rounded-xl px-8 py-4 text-lg font-bold transition sm:w-auto ${
                     isSubmitting
                       ? "cursor-not-allowed bg-[#d3e4fe] text-[#57657b]"
                       : "bg-black text-white"
@@ -335,7 +340,7 @@ export default function UploadPage() {
               </div>
             </div>
 
-            <div className="space-y-8 lg:col-span-4">
+            <div className="space-y-8">
               <div className="rounded-[2rem] border border-white/40 bg-white p-6">
                 <h4 className="mb-4 text-sm font-black uppercase tracking-widest text-[#45464d]">
                   Upload checklist
