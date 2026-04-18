@@ -1,26 +1,113 @@
+# -------------------------
+# Python
+# -------------------------
 .venv*
+venv/
+backend/venv/
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
 *.so
 *.egg-info/
+
+# -------------------------
+# Testing / cache
+# -------------------------
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 .coverage
 htmlcov/
+
+# -------------------------
+# Build
+# -------------------------
 dist/
 build/
-.DS_Store
+
+# -------------------------
+# Env files
+# -------------------------
 .env
 backend/.env
 frontend/.env
+
+# -------------------------
+# IDE
+# -------------------------
 .vscode/
 .idea/
+
+# -------------------------
+# Node
+# -------------------------
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.python-version
+
+# -------------------------
+# OS files
+# -------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# -------------------------
+# Logs
+# -------------------------
 *.log
+logs/
+
+# -------------------------
+# ML Models (IMPORTANT)
+# -------------------------
+*.pth
+*.pt
+*.onnx
+*.h5
+models/
+backend/models/
+
+# -------------------------
+# Datasets (VERY IMPORTANT)
+# -------------------------
+dataset/
+datasets/
+data/
+archive/
+FF++/
+Forensics++Training/
+dfdc_train_part_*/
+multi-part*/
+
+# -------------------------
+# Videos & Images
+# -------------------------
+*.mp4
+*.avi
+*.mov
+
+# -------------------------
+# Temp outputs
+# -------------------------
+temp/
+tmp/
+outputs/
+results/
+frames/
+extracted_frames/
+*.jpg
+*.png
+*.jpeg
+
+# -------------------------
+# Cache
+# -------------------------
+.cache/
+
+# -------------------------
+# Python version
+# -------------------------
+.python-version
