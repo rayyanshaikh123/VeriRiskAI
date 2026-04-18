@@ -324,35 +324,7 @@ export default function UploadPage() {
                             </button>
                           ))}
                         </div>
-                      </label>
-                  </div>
-
-                  <div className="surface-card p-6">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-                      Input type
-                    </p>
-                    <div className="mt-3 grid gap-2">
-                      {inputOptions.map((option) => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => {
-                            setInputType(option.value);
-                            setFile(null);
-                            if (previewUrl) {
-                              URL.revokeObjectURL(previewUrl);
-                              setPreviewUrl(null);
-                            }
-                          }}
-                          className={`rounded-lg border px-4 py-3 text-left text-xs font-semibold transition ${inputType === option.value
-                            ? "pill-active"
-                            : "border-muted bg-[var(--surface)] text-muted"
-                            }`}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
+                      </div>
                   </MagicBento>
                 </div>
 
@@ -618,9 +590,9 @@ export default function UploadPage() {
               </div>
             </MagicBento>
           </div>
+          </div>
+        </main>
       </div>
-    </main>
-      </div >
-    </ClickSpark >
+    </ClickSpark>
   );
 }
