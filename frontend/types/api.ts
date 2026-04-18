@@ -34,6 +34,13 @@ export interface SignalBreakdown {
   temporal_score?: number | null;
 }
 
+export interface SignalFlags {
+  artifact_flag: boolean;
+  frequency_anomaly: boolean;
+  temporal_inconsistency: boolean;
+  watermark_detected: boolean;
+}
+
 export interface VerifyUploadRequest {
   user_id: string;
   input_type: InputType;
@@ -44,4 +51,5 @@ export interface VerifyUploadResponse {
   verdict: Verdict;
   confidence: number;
   signals: SignalBreakdown;
+  flags: SignalFlags;
 }
