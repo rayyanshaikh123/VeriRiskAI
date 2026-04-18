@@ -84,7 +84,7 @@ export default function ResultsPage() {
     { label: "Frequency", value: frequencyScore },
     { label: "Temporal", value: temporalScore ?? 0 },
     { label: "Artifact", value: submitResult?.flags?.artifact_flag ? 0.65 : 0.15 },
-    { label: "Watermark", value: submitResult?.flags?.watermark_detected ? 0.7 : 0.1 },
+    { label: "Watermark", value: submitResult?.flags?.watermark_detected ? 0.7 : 0.0 },
   ];
   const signalTotal = signalWeights.reduce((sum, item) => sum + item.value, 0) || 1;
   const riskRing = Math.max(2, riskScore);
