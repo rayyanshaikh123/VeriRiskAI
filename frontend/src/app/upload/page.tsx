@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import ClickSpark from "@/components/ClickSpark";
+import MagicBento from "@/components/MagicBento";
 import { ApiError, uploadVerification } from "@/lib/api";
 import {
   stripBase64Prefix,
@@ -222,31 +224,33 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="page-background min-h-screen antialiased">
-      <header className="fixed top-0 z-50 w-full">
-        <div className="mx-auto flex h-20 w-full max-w-screen-2xl items-center justify-center px-6 md:px-8">
-          <nav className="master-pill-nav" aria-label="Primary navigation">
-            <Link className="master-pill-item" href="/">
-              Home
-            </Link>
-            <Link className="master-pill-item" href="/#quick-start">
-              Quick Start
-            </Link>
-            <Link className="master-pill-item is-active" href="/upload">
-              Upload
-            </Link>
-          </nav>
-        </div>
-      </header>
+    <ClickSpark sparkColor="#e2e8f0" sparkSize={12} sparkRadius={18} sparkCount={10}>
+      <div className="page-background min-h-screen antialiased">
+        <header className="fixed top-0 z-50 w-full">
+          <div className="mx-auto flex h-20 w-full max-w-screen-2xl items-center justify-center px-6 md:px-8">
+            <nav className="master-pill-nav" aria-label="Primary navigation">
+              <Link className="master-pill-item" href="/">
+                Home
+              </Link>
+              <Link className="master-pill-item" href="/#quick-start">
+                Quick Start
+              </Link>
+              <Link className="master-pill-item is-active" href="/upload">
+                Upload
+              </Link>
+            </nav>
+          </div>
+        </header>
 
-      <main className="px-6 pb-16 pt-28 text-[15px] md:px-8">
-        <div className="mx-auto max-w-6xl">
+        <main className="px-6 pb-16 pt-28 text-[15px] md:px-8">
+          <div className="mx-auto max-w-6xl">
           <header className="mb-12 text-center">
             <h1 className="mb-3 text-3xl font-semibold leading-tight tracking-tight text-primary md:text-5xl">
-              Upload Verification Media.
+              Submit Verification Media
             </h1>
             <p className="mx-auto max-w-xl text-base text-muted md:text-lg">
-              Upload a selfie image or short video to trigger offline deepfake analysis.
+              Upload a selfie image or short video to initiate AI-based deepfake detection and
+              authenticity analysis.
             </p>
           </header>
 
@@ -254,67 +258,90 @@ export default function UploadPage() {
             <div className="space-y-8">
               <div className="grid gap-8">
                 <div className="space-y-8">
-                  <div className="surface-card p-7">
-                    <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-                      User ID
-                      <input
-                        type="text"
-                        value={userId}
-                        onChange={(event) => setUserId(event.target.value)}
-                        placeholder="e.g. user_12345"
-                        className="mt-2 w-full rounded-lg border border-muted bg-[var(--surface)] px-4 py-3 text-sm text-primary focus:border-[var(--text)] focus:outline-none"
-                      />
-                      <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
-                        <span className="text-muted">Demo:</span>
-                        {demoUsers.map((demo) => (
+                  <MagicBento
+                    enableSpotlight={false}
+                    enableStars={false}
+                    enableTilt={false}
+                    enableMagnetism={false}
+                    clickEffect={false}
+                    textAutoHide={false}
+                    enableBorderGlow
+                    gridClassName="space-y-6 bento-section"
+                    cardClassName="magic-bento-card--free"
+                  >
+                    <div className="surface-card p-7">
+                      <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+                        User ID
+                        <input
+                          type="text"
+                          value={userId}
+                          onChange={(event) => setUserId(event.target.value)}
+                          placeholder="e.g. user_12345"
+                          className="mt-2 w-full rounded-lg border border-muted bg-[var(--surface)] px-4 py-3 text-sm text-primary focus:border-[var(--text)] focus:outline-none"
+                        />
+                        <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
+                          <span className="text-muted">Demo:</span>
+                          {demoUsers.map((demo) => (
+                            <button
+                              key={demo}
+                              type="button"
+                              onClick={() => setUserId(demo)}
+                              className="rounded-full border border-muted bg-[var(--surface)] px-3 py-1 text-primary transition hover:border-[var(--text)]"
+                            >
+                              {demo}
+                            </button>
+                          ))}
+                        </div>
+                      </label>
+                    </div>
+
+                    <div className="surface-card border border-[rgba(226,232,240,0.6)] bg-white/90 p-7 shadow-soft">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#57657b]">
+                        Input type
+                      </p>
+                      <p className="mt-2 text-sm text-[#57657b]">
+                        Choose the primary input to guide the verification pipeline.
+                      </p>
+                      <div className="mt-5 grid gap-3">
+                        {inputOptions.map((option) => (
                           <button
-                            key={demo}
+                            key={option.value}
                             type="button"
-                            onClick={() => setUserId(demo)}
-                            className="rounded-full border border-muted bg-[var(--surface)] px-3 py-1 text-primary transition hover:border-[var(--text)]"
+                            onClick={() => {
+                              setInputType(option.value);
+                              setFile(null);
+                              if (previewUrl) {
+                                URL.revokeObjectURL(previewUrl);
+                                setPreviewUrl(null);
+                              }
+                            }}
+                            className={`group flex w-full items-center justify-between rounded-2xl border px-5 py-4 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9dc1ff]/60 ${
+                              inputType === option.value
+                                ? "border-white bg-white text-[#0b1c30] shadow-soft"
+                                : "border-[#1c2d4a] bg-[#0f1c33] text-[#e2e8f0] hover:border-[#9dc1ff]"
+                            }`}
                           >
-                            {demo}
+                            <span>{option.label}</span>
                           </button>
                         ))}
                       </div>
-                    </label>
-                  </div>
-
-                  <div className="surface-card border border-[rgba(226,232,240,0.6)] bg-white/90 p-7 shadow-soft">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#57657b]">
-                      Input type
-                    </p>
-                    <p className="mt-2 text-sm text-[#57657b]">
-                      Choose the primary input to guide the verification pipeline.
-                    </p>
-                    <div className="mt-5 grid gap-3">
-                      {inputOptions.map((option) => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => {
-                            setInputType(option.value);
-                            setFile(null);
-                            if (previewUrl) {
-                              URL.revokeObjectURL(previewUrl);
-                              setPreviewUrl(null);
-                            }
-                          }}
-                          className={`rounded-xl border px-5 py-4 text-left text-sm font-semibold transition ${
-                            inputType === option.value
-                              ? "border-black bg-black text-white shadow-soft"
-                              : "border-[#d3e4fe] bg-white text-[#57657b] hover:border-black"
-                          }`}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
                     </div>
-                  </div>
+                  </MagicBento>
                 </div>
 
                 <div className="space-y-6">
-                  <div className="surface-card mx-auto w-full max-w-[560px] p-7">
+                  <MagicBento
+                    enableSpotlight={false}
+                    enableStars={false}
+                    enableTilt={false}
+                    enableMagnetism={false}
+                    clickEffect={false}
+                    textAutoHide={false}
+                    enableBorderGlow
+                    gridClassName="bento-section"
+                    cardClassName="magic-bento-card--free"
+                  >
+                    <div className="surface-card mx-auto w-full max-w-[560px] p-7">
                     <h4 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
                       Upload media
                     </h4>
@@ -368,7 +395,8 @@ export default function UploadPage() {
                         <div className="text-xs text-muted">{fileMeta.size}</div>
                       </div>
                     )}
-                  </div>
+                    </div>
+                  </MagicBento>
                 </div>
               </div>
 
@@ -397,155 +425,177 @@ export default function UploadPage() {
                   }`}
                 >
                   <span>{isSubmitting ? "Uploading..." : "Continue to Processing"}</span>
-                  <span className="material-symbols-outlined transition-transform group-hover:translate-x-1">
-                    arrow_forward
-                  </span>
                 </button>
               </div>
             </div>
 
             <div className="space-y-8">
-              <div className="surface-card p-6">
-                <h4 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-                  Upload checklist
-                </h4>
-                <ul className="space-y-3 text-xs text-muted">
-                  <li className="flex items-start gap-3">
-                    <span className="mt-1 h-1.5 w-1.5 rounded-full bg-[#4edea3]"></span>
-                    <span>Single selfie image or short video only.</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="mt-1 h-1.5 w-1.5 rounded-full bg-[#4edea3]"></span>
-                    <span>JPEG/PNG for images, MP4/WEBM for video.</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="mt-1 h-1.5 w-1.5 rounded-full bg-[#4edea3]"></span>
-                    <span>Even lighting, steady camera, avoid motion blur.</span>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="surface-card p-7">
-                <h4 className="mb-4 flex items-center text-base font-semibold text-primary">
-                  <span className="material-symbols-outlined mr-2 text-lg text-muted">
-                    verified_user
-                  </span>
-                  Media Verification Guidelines
-                </h4>
-                <div className="space-y-6">
-                  <div className="flex items-start space-x-4">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-muted)]">
-                      <span className="material-symbols-outlined text-sm text-muted">
-                        light_mode
-                      </span>
-                    </div>
-                    <div>
-                      <h5 className="mb-1 text-sm font-semibold text-primary">Avoid Direct Glare</h5>
-                      <p className="text-xs leading-relaxed text-muted">
-                        Ensure lighting is uniform and your face is fully visible.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-4">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-muted)]">
-                      <span className="material-symbols-outlined text-sm text-muted">
-                        crop
-                      </span>
-                    </div>
-                    <div>
-                      <h5 className="mb-1 text-sm font-semibold text-primary">Keep In Frame</h5>
-                      <p className="text-xs leading-relaxed text-muted">
-                        Avoid cropped foreheads or chins for best detection quality.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-4">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-muted)]">
-                      <span className="material-symbols-outlined text-sm text-muted">
-                        visibility
-                      </span>
-                    </div>
-                    <div>
-                      <h5 className="mb-1 text-sm font-semibold text-primary">Readable Detail</h5>
-                      <p className="text-xs leading-relaxed text-muted">
-                        Higher resolution improves frequency and artifact analysis.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="surface-card p-6">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-                    Verification Status
+              <MagicBento
+                enableSpotlight={false}
+                enableStars={false}
+                enableTilt={false}
+                enableMagnetism={false}
+                clickEffect={false}
+                textAutoHide={false}
+                enableBorderGlow
+                gridClassName="space-y-8 bento-section"
+                cardClassName="magic-bento-card--free"
+              >
+                <div className="surface-card p-6">
+                  <h4 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+                    Upload checklist
                   </h4>
-                  <span className="text-[11px] font-semibold text-muted">
-                    {file ? "Live" : "Waiting for upload"}
-                  </span>
+                  <ul className="space-y-3 text-xs text-muted">
+                    <li className="flex items-start gap-3">
+                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-[#4edea3]"></span>
+                      <span>Single selfie image or short video only.</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-[#4edea3]"></span>
+                      <span>JPEG/PNG for images, MP4/WEBM for video.</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-[#4edea3]"></span>
+                      <span>Even lighting, steady camera, avoid motion blur.</span>
+                    </li>
+                  </ul>
                 </div>
-                <div className="mt-3">
-                  <div className="flex items-center justify-between text-[11px] text-muted">
-                    <span>Progress</span>
-                    <span>{progressValue}%</span>
-                  </div>
-                  <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
-                    <div
-                      className="h-full rounded-full bg-[#4edea3] transition-all duration-500"
-                      style={{ width: `${progressValue}%` }}
-                    />
-                  </div>
-                </div>
-                <ul className="mt-4 space-y-3 text-xs text-muted">
-                  {statusItems.map((item) => (
-                    <li key={item.label} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`material-symbols-outlined text-sm ${
-                            item.state === "ok"
-                              ? "text-[#4edea3]"
-                              : item.state === "warn"
-                                ? "text-[#f59e0b]"
-                                : "text-[#94a3b8]"
-                          } ${item.state === "waiting" ? "animate-pulse" : ""}`}
-                        >
-                          {item.state === "ok"
-                            ? "check_circle"
-                            : item.state === "warn"
-                              ? "warning"
-                              : "hourglass_empty"}
-                        </span>
-                        <span
-                          className="text-primary/80"
-                          title={
-                            item.label === "Lighting quality" && item.state === "warn"
-                              ? "Try even, front-facing light and reduce harsh shadows."
-                              : undefined
-                          }
-                        >
-                          {item.label}
+
+                <div className="surface-card p-7">
+                  <h4 className="mb-4 flex items-center text-base font-semibold text-primary">
+                    <span className="material-symbols-outlined mr-2 text-lg text-muted">
+                      verified_user
+                    </span>
+                    Media Verification Guidelines
+                  </h4>
+                  <div className="space-y-6">
+                    <div className="flex items-start space-x-4">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-muted)]">
+                        <span className="material-symbols-outlined text-sm text-muted">
+                          light_mode
                         </span>
                       </div>
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-                        {item.state === "ok"
-                          ? "Pass"
-                          : item.state === "warn"
-                            ? "Check"
-                            : "Pending"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                      <div>
+                        <h5 className="mb-1 text-sm font-semibold text-primary">Avoid Direct Glare</h5>
+                        <p className="text-xs leading-relaxed text-muted">
+                          Ensure lighting is uniform and your face is fully visible.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-4">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-muted)]">
+                        <span className="material-symbols-outlined text-sm text-muted">
+                          crop
+                        </span>
+                      </div>
+                      <div>
+                        <h5 className="mb-1 text-sm font-semibold text-primary">Keep In Frame</h5>
+                        <p className="text-xs leading-relaxed text-muted">
+                          Avoid cropped foreheads or chins for best detection quality.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-4">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-muted)]">
+                        <span className="material-symbols-outlined text-sm text-muted">
+                          visibility
+                        </span>
+                      </div>
+                      <div>
+                        <h5 className="mb-1 text-sm font-semibold text-primary">Readable Detail</h5>
+                        <p className="text-xs leading-relaxed text-muted">
+                          Higher resolution improves frequency and artifact analysis.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="surface-card p-6">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+                      Verification Status
+                    </h4>
+                    <span className="text-[11px] font-semibold text-muted">
+                      {file ? "Live" : "Waiting for upload"}
+                    </span>
+                  </div>
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between text-[11px] text-muted">
+                      <span>Progress</span>
+                      <span>{progressValue}%</span>
+                    </div>
+                    <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                      <div
+                        className="h-full rounded-full bg-[#4edea3] transition-all duration-500"
+                        style={{ width: `${progressValue}%` }}
+                      />
+                    </div>
+                  </div>
+                  <ul className="mt-4 space-y-3 text-xs text-muted">
+                    {statusItems.map((item) => (
+                      <li key={item.label} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`material-symbols-outlined text-sm ${
+                              item.state === "ok"
+                                ? "text-[#4edea3]"
+                                : item.state === "warn"
+                                  ? "text-[#f59e0b]"
+                                  : "text-[#94a3b8]"
+                            } ${item.state === "waiting" ? "animate-pulse" : ""}`}
+                          >
+                            {item.state === "ok"
+                              ? "check_circle"
+                              : item.state === "warn"
+                                ? "warning"
+                                : "hourglass_empty"}
+                          </span>
+                          <span
+                            className="text-primary/80"
+                            title={
+                              item.label === "Lighting quality" && item.state === "warn"
+                                ? "Try even, front-facing light and reduce harsh shadows."
+                                : undefined
+                            }
+                          >
+                            {item.label}
+                          </span>
+                        </div>
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+                          {item.state === "ok"
+                            ? "Pass"
+                            : item.state === "warn"
+                              ? "Check"
+                              : "Pending"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </MagicBento>
             </div>
           </div>
           <div className="mt-12 flex justify-center">
-            <div className="inline-flex items-center gap-3 rounded-full border border-[#d3e4fe] bg-white px-6 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#57657b] shadow-soft">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#4edea3]"></span>
-              Ensuring Security • End-to-End Encryption
-            </div>
+            <MagicBento
+              enableSpotlight={false}
+              enableStars={false}
+              enableTilt={false}
+              enableMagnetism={false}
+              clickEffect={false}
+              textAutoHide={false}
+              enableBorderGlow
+              gridClassName="bento-section"
+              cardClassName="magic-bento-card--free"
+            >
+              <div className="inline-flex items-center gap-3 rounded-full border border-[#1c2d4a] bg-[#0f1c33] px-6 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white shadow-soft">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#4edea3]"></span>
+                Ensuring Security • End-to-End Encryption
+              </div>
+            </MagicBento>
           </div>
-        </div>
-      </main>
-    </div>
+          </div>
+        </main>
+      </div>
+    </ClickSpark>
   );
 }
