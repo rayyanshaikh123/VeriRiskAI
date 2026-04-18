@@ -7,3 +7,5 @@ pyyaml
 numpy
 opencv-python
 scipy
+insightface
+onnxruntime

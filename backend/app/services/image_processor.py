@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, Optional
 
 import cv2
@@ -23,6 +24,7 @@ class ImageProcessor:
         self._frequency_detector = frequency_detector
         self._artifact_analyzer = ArtifactAnalyzer()
         self._watermark_detector = WatermarkDetector()
+        self._logger = logging.getLogger("image_processor")
 
     def _decode_image(self, image_bytes: bytes) -> np.ndarray | None:
         data = np.frombuffer(image_bytes, dtype=np.uint8)
@@ -37,6 +39,7 @@ class ImageProcessor:
     def process(self, image_bytes: bytes) -> Dict[str, Optional[float]]:
         image = self._decode_image(image_bytes)
         if image is None:
+            self._logger.warning("Image decode failed")
             return {
                 "spatial_fake_score": 0.0,
                 "frequency_fake_score": 0.0,
@@ -46,8 +49,13 @@ class ImageProcessor:
             }
 
         image = cv2.resize(image, (224, 224))
-        faces = self._face_extractor.extract(image_bytes).get("faces", [])
+        face_result = self._face_extractor.extract(image_bytes)
+        faces = face_result.get("faces", [])
         face_box = faces[0] if faces else None
+        self._logger.info(
+            "Face detection: %s",
+            {"face_count": face_result.get("face_count", 0)},
+        )
         if face_box:
             x, y, w, h = face_box
             x = max(0, min(x, image.shape[1] - 1))
@@ -59,12 +67,25 @@ class ImageProcessor:
             roi = image
 
         roi_bytes = self._encode_jpeg(roi)
+        if not roi_bytes:
+            self._logger.warning("ROI encoding failed")
         spatial = clamp01(self._spatial_detector.detect(roi_bytes).get("score", 0.0))
         frequency = clamp01(
             self._frequency_detector.detect(roi_bytes).get("score", 0.0)
         )
         artifact = self._artifact_analyzer.analyze(roi, face_box if face_box else None)
         watermark = self._watermark_detector.detect(roi)
+
+        self._logger.info(
+            "Signal outputs: %s",
+            {
+                "spatial_fake_score": spatial,
+                "frequency_fake_score": frequency,
+                "artifact_score": artifact.get("score"),
+                "artifact_flag": artifact.get("artifact_flag"),
+                "watermark_detected": watermark.get("watermark_detected"),
+            },
+        )
 
         return {
             "spatial_fake_score": float(spatial),
