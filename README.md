@@ -4,19 +4,23 @@ VeriRiskAI is a batch-only KYC verification system that accepts a selfie image o
 
 ## System Architecture
 
+### End-to-End Flow
+
 ```mermaid
 graph TD
   U[User] --> FE[Frontend /upload]
   FE -->|POST /v1/verify/upload| API[FastAPI Backend]
 
-  API --> IMG[Image Processor]
-  API --> VID[Video Processor]
+  API --> VAL[Validation + Limits]
+  VAL --> IMG[Image Processor]
+  VAL --> VID[Video Processor]
 
   IMG --> FACE[Face Extractor]
-  IMG --> SPATIAL[Spatial Detector]
-  IMG --> FREQ[Frequency Detector]
-  IMG --> ART[Artifact Analyzer]
-  IMG --> WM[Watermark Detector]
+  IMG --> ROI[ROI Selection]
+  ROI --> SPATIAL[Spatial Detector (Xception)]
+  ROI --> FREQ[Frequency Detector]
+  ROI --> ART[Artifact Analyzer]
+  ROI --> WM[Watermark Detector]
 
   VID --> FRAMES[Frame Sampler]
   FRAMES --> SPATIAL
@@ -33,8 +37,48 @@ graph TD
   WM --> FUSION
   BEHAV --> FUSION
 
-  FUSION --> RESP[Verdict + Confidence + Signals]
+  FUSION --> RESP[Verdict + Confidence + Signals + Flags]
   RESP --> FE
+```
+
+### Service-Level Architecture
+
+```mermaid
+flowchart LR
+  subgraph Client
+    FE[Next.js UI]
+  end
+
+  subgraph API[FastAPI Service]
+    V1[POST /v1/verify/upload]
+    VAL[Validation + Size Limits]
+    PIPE[Image or Video Pipeline]
+    FUSION[Fusion Engine]
+  end
+
+  subgraph Signals[Detectors]
+    SPATIAL[Spatial Detector (Xception, PyTorch)]
+    FREQ[Frequency Detector (FFT)]
+    TEMP[Temporal Detector (Flow + MSE)]
+    ART[Artifact Analyzer (Edges)]
+    WM[Watermark Detector]
+    BEHAV[Behavioral Analyzer]
+  end
+
+  FE --> V1 --> VAL --> PIPE
+  PIPE --> SPATIAL
+  PIPE --> FREQ
+  PIPE --> TEMP
+  PIPE --> ART
+  PIPE --> WM
+  PIPE --> BEHAV
+  SPATIAL --> FUSION
+  FREQ --> FUSION
+  TEMP --> FUSION
+  ART --> FUSION
+  WM --> FUSION
+  BEHAV --> FUSION
+  FUSION --> FE
 ```
 
 ## Backend Pipeline (Image vs Video)
@@ -91,15 +135,35 @@ flowchart LR
 
 The canonical OpenAPI spec lives in [backend/openapi.yaml](backend/openapi.yaml).
 
-## Current Detector Status
+## Model and Signal Details
 
-- Spatial: stub (returns constant score)
-- Frequency: FFT-based
-- Temporal: frame MSE + spike scoring (video only)
-- Behavioral: motion consistency (video only)
-- Artifact: heuristic edge/texture cues
-- Watermark: heuristic score + flag
-- Face detection: RetinaFace via InsightFace
+### Spatial Detector (Xception)
+
+- Model: timm `legacy_xception` with a single-logit head.
+- Weights: `backend/models/deepfake_model_xception.pth`.
+- Input: $224 \times 224$ RGB, ImageNet normalization.
+- Output: sigmoid logit is interpreted as real probability; fake score is $1 - \text{real\_prob}$.
+- Runtime: CPU-only.
+
+### Frequency Detector
+
+- FFT-based frequency energy analysis with radial profiling for irregularity.
+
+### Temporal Detector (Video)
+
+- Optical flow consistency blended with frame MSE to detect jitter or synthesis drift.
+
+### Artifact Analyzer
+
+- Edge-boundary cues and visual artifact heuristics (Canny-based analysis).
+
+### Watermark Detector
+
+- Heuristic watermark presence and score.
+
+### Behavioral Analyzer (Video)
+
+- Motion consistency features for behavioral stability.
 
 ## Local Development
 
@@ -128,7 +192,6 @@ npm run dev
 Environment variables (see `backend/.env.example`):
 - `LOG_LEVEL`
 - `FUSION_XGB_MODEL_PATH`
-- `SPATIAL_MODEL_URL`
 - `SPATIAL_MODEL_PATH`
 
 ## Constraints

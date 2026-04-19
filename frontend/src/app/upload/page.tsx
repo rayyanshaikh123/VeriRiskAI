@@ -22,7 +22,7 @@ const inputOptions: { label: string; value: InputType }[] = [
   { label: "Short video", value: "video" },
 ];
 
-const demoUsers = ["demo_olivia", "demo_raj", "demo_maria"];
+const DEFAULT_USER_ID = "anonymous";
 
 async function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -52,22 +52,27 @@ function formatBytes(bytes: number): string {
 export default function UploadPage() {
   const router = useRouter();
   const abortRef = useRef<AbortController | null>(null);
-  const [userId, setUserId] = useState("");
   const [inputType, setInputType] = useState<InputType>("image");
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
-  const { setUserInput, setSubmitResult, setError, clearError, error, resetSession } =
+  const {
+    setUserInput,
+    setSubmitResult,
+    setError,
+    clearError,
+    error,
+    resetSession,
+    setPreviewUrl: setSessionPreviewUrl,
+    setPreviewDataUrl,
+  } = useSessionStore();
     useSessionStore();
 
   useEffect(() => {
     return () => {
       abortRef.current?.abort();
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
     };
   }, [previewUrl]);
 
@@ -126,6 +131,8 @@ export default function UploadPage() {
         URL.revokeObjectURL(previewUrl);
         setPreviewUrl(null);
       }
+      setSessionPreviewUrl(undefined);
+      setPreviewDataUrl(undefined);
       return;
     }
 
@@ -157,11 +164,9 @@ export default function UploadPage() {
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
     }
-    if (inputType === "image") {
-      setPreviewUrl(URL.createObjectURL(selected));
-    } else {
-      setPreviewUrl(null);
-    }
+    const url = URL.createObjectURL(selected);
+    setPreviewUrl(url);
+    setSessionPreviewUrl(url);
   };
 
   const handleRemoveUpload = () => {
@@ -170,13 +175,11 @@ export default function UploadPage() {
       URL.revokeObjectURL(previewUrl);
       setPreviewUrl(null);
     }
+    setSessionPreviewUrl(undefined);
+    setPreviewDataUrl(undefined);
   };
 
   const handleSubmit = async () => {
-    if (!userId.trim()) {
-      setLocalError("User ID is required");
-      return;
-    }
     if (!file) {
       setLocalError("Please choose a file to upload");
       return;
@@ -193,15 +196,16 @@ export default function UploadPage() {
     try {
       const dataUrl = await fileToBase64(file);
       const base64 = stripBase64Prefix(dataUrl);
+      setPreviewDataUrl(dataUrl);
       const response = await uploadVerification(
         {
-          user_id: userId.trim(),
+          user_id: DEFAULT_USER_ID,
           input_type: inputType,
           file: base64,
         },
         { signal: controller.signal },
       );
-      setUserInput(userId.trim(), inputType);
+      setUserInput(DEFAULT_USER_ID, inputType);
       setSubmitResult(response);
       router.push("/processing");
     } catch (err) {
@@ -232,8 +236,11 @@ export default function UploadPage() {
               <Link className="master-pill-item" href="/">
                 Home
               </Link>
+              <Link className="master-pill-item" href="/#features">
+                Features
+              </Link>
               <Link className="master-pill-item" href="/#quick-start">
-                Quick Start
+                How It Works
               </Link>
               <Link className="master-pill-item is-active" href="/upload">
                 Upload
@@ -248,7 +255,7 @@ export default function UploadPage() {
               <h1 className="mb-3 text-3xl font-semibold leading-tight tracking-tight text-primary md:text-5xl">
                 Submit Verification Media
               </h1>
-              <p className="mx-auto max-w-xl text-base text-muted md:text-lg">
+              <p className="mx-auto max-w-xl text-base text-slate-200 md:text-lg">
                 Upload a selfie image or short video to initiate AI-based deepfake detection and
                 authenticity analysis.
               </p>
@@ -269,37 +276,11 @@ export default function UploadPage() {
                       gridClassName="space-y-6 bento-section"
                       cardClassName="magic-bento-card--free"
                     >
-                      <div className="surface-card p-7">
-                        <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-                          User ID
-                          <input
-                            type="text"
-                            value={userId}
-                            onChange={(event) => setUserId(event.target.value)}
-                            placeholder="e.g. user_12345"
-                            className="mt-2 w-full rounded-lg border border-muted bg-[var(--surface)] px-4 py-3 text-sm text-primary focus:border-[var(--text)] focus:outline-none"
-                          />
-                          <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
-                            <span className="text-muted">Demo:</span>
-                            {demoUsers.map((demo) => (
-                              <button
-                                key={demo}
-                                type="button"
-                                onClick={() => setUserId(demo)}
-                                className="rounded-full border border-muted bg-[var(--surface)] px-3 py-1 text-primary transition hover:border-[var(--text)]"
-                              >
-                                {demo}
-                              </button>
-                            ))}
-                          </div>
-                        </label>
-                      </div>
-
                       <div className="surface-card border border-[rgba(226,232,240,0.6)] bg-white/90 p-7 shadow-soft">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#57657b]">
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-200">
                           Input type
                         </p>
-                        <p className="mt-2 text-sm text-[#57657b]">
+                        <p className="mt-2 text-base text-slate-300">
                           Choose the primary input to guide the verification pipeline.
                         </p>
                         <div className="mt-5 grid gap-3">
@@ -315,7 +296,7 @@ export default function UploadPage() {
                                   setPreviewUrl(null);
                                 }
                               }}
-                              className={`group flex w-full items-center justify-between rounded-2xl border px-5 py-4 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9dc1ff]/60 ${inputType === option.value
+                              className={`group flex w-full items-center justify-between rounded-2xl border px-5 py-4 text-left text-base font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9dc1ff]/60 ${inputType === option.value
                                   ? "border-white bg-white text-[#0b1c30] shadow-soft"
                                   : "border-[#1c2d4a] bg-[#0f1c33] text-[#e2e8f0] hover:border-[#9dc1ff]"
                                 }`}
@@ -341,14 +322,14 @@ export default function UploadPage() {
                     cardClassName="magic-bento-card--free"
                   >
                     <div className="surface-card mx-auto w-full max-w-[560px] p-7">
-                      <h4 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+                      <h4 className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-200">
                         Upload media
                       </h4>
-                      <label className="flex min-h-[190px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-muted bg-[var(--surface)] px-8 py-10 text-center text-sm text-muted transition hover:border-[var(--text)]">
+                      <label className="flex min-h-[190px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-muted bg-[var(--surface)] px-8 py-10 text-center text-base text-slate-200 transition hover:border-[var(--text)]">
                         <span className="text-base font-semibold text-primary">
                           Choose {inputType === "image" ? "a selfie image" : "a short video"}
                         </span>
-                        <span className="text-xs text-muted">
+                        <span className="text-sm text-slate-300">
                           {inputType === "image"
                             ? "JPEG/PNG up to 2MB."
                             : "MP4/WEBM/QuickTime up to 15MB."}
@@ -379,19 +360,28 @@ export default function UploadPage() {
 
                       {previewUrl && (
                         <div className="mt-4 rounded-lg border border-muted bg-[var(--surface)] p-3">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={previewUrl}
-                            alt="Selfie preview"
-                            className="max-h-72 w-full object-contain"
-                          />
+                          {inputType === "image" ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={previewUrl}
+                              alt="Selfie preview"
+                              className="max-h-72 w-full object-contain"
+                            />
+                          ) : (
+                            <video
+                              src={previewUrl}
+                              controls
+                              playsInline
+                              className="max-h-72 w-full rounded-md object-contain"
+                            />
+                          )}
                         </div>
                       )}
 
                       {fileMeta && !previewUrl && (
-                        <div className="mt-4 rounded-lg border border-dashed border-muted p-4 text-sm text-muted">
+                        <div className="mt-4 rounded-lg border border-dashed border-muted p-4 text-base text-slate-200">
                           <div className="font-semibold text-primary">{fileMeta.name}</div>
-                          <div className="text-xs text-muted">{fileMeta.size}</div>
+                          <div className="text-sm text-slate-300">{fileMeta.size}</div>
                         </div>
                       )}
                     </div>
@@ -408,7 +398,7 @@ export default function UploadPage() {
 
               <div className="mx-auto flex max-w-[560px] flex-col-reverse items-center gap-4 pt-2 sm:flex-row sm:justify-between">
                 <Link
-                  className="btn-secondary w-full px-5 py-2 text-sm sm:w-auto"
+                  className="btn-secondary w-full px-5 py-2 text-base text-slate-200 sm:w-auto"
                   href="/"
                 >
                   Back to Landing
@@ -417,7 +407,7 @@ export default function UploadPage() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  className={`btn-primary group w-full px-8 py-4 text-base sm:w-auto ${isSubmitting
+                  className={`btn-primary group w-full px-8 py-4 text-lg sm:w-auto ${isSubmitting
                     ? "cursor-not-allowed bg-slate-200 text-slate-500"
                     : "bg-slate-900 text-white"
                     }`}
@@ -440,10 +430,10 @@ export default function UploadPage() {
                 cardClassName="magic-bento-card--free"
               >
                 <div className="surface-card p-6">
-                  <h4 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+                  <h4 className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-200">
                     Upload checklist
                   </h4>
-                  <ul className="space-y-3 text-xs text-muted">
+                  <ul className="space-y-3 text-sm text-slate-200">
                     <li className="flex items-start gap-3">
                       <span className="mt-1 h-1.5 w-1.5 rounded-full bg-[#4edea3]"></span>
                       <span>Single selfie image or short video only.</span>
@@ -460,7 +450,7 @@ export default function UploadPage() {
                 </div>
 
                 <div className="surface-card p-7">
-                  <h4 className="mb-4 flex items-center text-base font-semibold text-primary">
+                  <h4 className="mb-4 flex items-center text-lg font-semibold text-primary">
                     <span className="material-symbols-outlined mr-2 text-lg text-muted">
                       verified_user
                     </span>
@@ -469,39 +459,39 @@ export default function UploadPage() {
                   <div className="space-y-6">
                     <div className="flex items-start space-x-4">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-muted)]">
-                        <span className="material-symbols-outlined text-sm text-muted">
+                        <span className="material-symbols-outlined text-base text-slate-300">
                           light_mode
                         </span>
                       </div>
                       <div>
-                        <h5 className="mb-1 text-sm font-semibold text-primary">Avoid Direct Glare</h5>
-                        <p className="text-xs leading-relaxed text-muted">
+                        <h5 className="mb-1 text-base font-semibold text-primary">Avoid Direct Glare</h5>
+                        <p className="text-sm leading-relaxed text-slate-200">
                           Ensure lighting is uniform and your face is fully visible.
                         </p>
                       </div>
                     </div>
                     <div className="flex items-start space-x-4">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-muted)]">
-                        <span className="material-symbols-outlined text-sm text-muted">
+                        <span className="material-symbols-outlined text-base text-slate-300">
                           crop
                         </span>
                       </div>
                       <div>
-                        <h5 className="mb-1 text-sm font-semibold text-primary">Keep In Frame</h5>
-                        <p className="text-xs leading-relaxed text-muted">
+                        <h5 className="mb-1 text-base font-semibold text-primary">Keep In Frame</h5>
+                        <p className="text-sm leading-relaxed text-slate-200">
                           Avoid cropped foreheads or chins for best detection quality.
                         </p>
                       </div>
                     </div>
                     <div className="flex items-start space-x-4">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-muted)]">
-                        <span className="material-symbols-outlined text-sm text-muted">
+                        <span className="material-symbols-outlined text-base text-slate-300">
                           visibility
                         </span>
                       </div>
                       <div>
-                        <h5 className="mb-1 text-sm font-semibold text-primary">Readable Detail</h5>
-                        <p className="text-xs leading-relaxed text-muted">
+                        <h5 className="mb-1 text-base font-semibold text-primary">Readable Detail</h5>
+                        <p className="text-sm leading-relaxed text-slate-200">
                           Higher resolution improves frequency and artifact analysis.
                         </p>
                       </div>
@@ -510,15 +500,15 @@ export default function UploadPage() {
                 </div>
                 <div className="surface-card p-6">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+                    <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-200">
                       Verification Status
                     </h4>
-                    <span className="text-[11px] font-semibold text-muted">
+                    <span className="text-xs font-semibold text-slate-200">
                       {file ? "Live" : "Waiting for upload"}
                     </span>
                   </div>
                   <div className="mt-3">
-                    <div className="flex items-center justify-between text-[11px] text-muted">
+                    <div className="flex items-center justify-between text-xs text-slate-200">
                       <span>Progress</span>
                       <span>{progressValue}%</span>
                     </div>
@@ -529,7 +519,7 @@ export default function UploadPage() {
                       />
                     </div>
                   </div>
-                  <ul className="mt-4 space-y-3 text-xs text-muted">
+                  <ul className="mt-4 space-y-3 text-sm text-slate-200">
                     {statusItems.map((item) => (
                       <li key={item.label} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -558,7 +548,7 @@ export default function UploadPage() {
                             {item.label}
                           </span>
                         </div>
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+                        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-300">
                           {item.state === "ok"
                             ? "Pass"
                             : item.state === "warn"

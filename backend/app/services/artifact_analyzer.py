@@ -36,23 +36,29 @@ class ArtifactAnalyzer:
         sharpness_score = clamp01((0.6 - sharpness_ratio) / 0.6)
 
         boundary_score = 0.0
+        edge_density_inner = 0.0
+        edge_density_boundary = 0.0
+        edges = cv2.Canny((gray * 255).astype(np.uint8), 100, 200)
         if face_box:
-            edges = cv2.Canny((gray * 255).astype(np.uint8), 80, 160)
-            thickness = max(2, min(fw, fh) // 20)
+            thickness = max(2, min(fw, fh) // 12)
             x0 = max(0, x - thickness)
             y0 = max(0, y - thickness)
             x1 = min(w, x + fw + thickness)
             y1 = min(h, y + fh + thickness)
 
-            face_edges = edges[y : y + fh, x : x + fw]
-            ring = edges[y0:y1, x0:x1].copy()
-            ring[thickness:-thickness, thickness:-thickness] = 0
+            inner_edges = edges[y : y + fh, x : x + fw]
+            boundary_band = edges[y0:y1, x0:x1].copy()
+            boundary_band[thickness:-thickness, thickness:-thickness] = 0
 
-            face_density = float(face_edges.mean() / 255.0)
-            ring_density = float(ring.mean() / 255.0)
-            diff = abs(face_density - ring_density)
-            denom = max(face_density, ring_density, 1e-6)
-            boundary_score = clamp01(diff / denom)
+            edge_density_inner = float(inner_edges.mean() / 255.0)
+            edge_density_boundary = float(boundary_band.mean() / 255.0)
+        else:
+            edge_density_inner = float(edges.mean() / 255.0)
+            edge_density_boundary = edge_density_inner
+
+        diff = abs(edge_density_boundary - edge_density_inner)
+        denom = max(edge_density_boundary, edge_density_inner, 1e-6)
+        boundary_score = clamp01(diff / denom)
 
         eye_score = 0.0
         if face_box and face_region.shape[1] >= 2:
@@ -67,5 +73,5 @@ class ArtifactAnalyzer:
             symmetry = float(np.mean(np.abs(left - right_flipped)))
             eye_score = clamp01(symmetry / 0.2)
 
-        score = clamp01(0.4 * sharpness_score + 0.35 * boundary_score + 0.25 * eye_score)
+        score = clamp01(0.35 * sharpness_score + 0.4 * boundary_score + 0.25 * eye_score)
         return {"artifact_flag": score > 0.6, "score": float(score)}
