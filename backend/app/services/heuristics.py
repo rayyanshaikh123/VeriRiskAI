@@ -230,9 +230,9 @@ class HeuristicAnalyzer:
         # Weighted fusion — frame_diff is the most reliable without landmarks
         if self._landmark_ready:
             heuristic_score = clamp01(
-                0.35 * blink_score +
-                0.30 * lip_score +
-                0.35 * frame_diff_score
+                0.40 * frame_diff_score +
+                0.30 * blink_score +
+                0.30 * lip_score
             )
         else:
             # Only frame_diff is available

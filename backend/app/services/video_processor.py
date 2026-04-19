@@ -326,7 +326,7 @@ CNN EMBEDDINGS   :  {len(embeddings)}
         if spatial_scores:
             for i, sc in enumerate(spatial_scores):
                 report += f"  Frame {i:02d}: {sc:.4f}\n"
-            report += f"  --> MAXIMUM CNN SCORE: {cnn_score:.4f}\n"
+            report += f"  --> AVERAGE CNN SCORE: {cnn_score:.4f}\n"
         else:
             report += "  No spatial scores extracted.\n"
 

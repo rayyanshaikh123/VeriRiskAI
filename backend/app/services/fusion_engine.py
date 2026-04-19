@@ -133,18 +133,30 @@ class FusionEngine:
                 risk_level  (str)     — LOW / MEDIUM / HIGH
                 components  (dict)    — individual input scores + weights used
         """
+        cnn_score = clamp01(cnn_score)
+        lstm_score = clamp01(lstm_score)
+        heuristic_score = clamp01(heuristic_score)
+
+        # Scale heuristic score to make anomalies more impactful
+        heuristic_score = min(1.0, heuristic_score * 2.5)
+
+        # Detect unreliable LSTM (constant ~0.5 output)
         if lstm_model_loaded:
-            w_cnn = 0.35
-            w_lstm = 0.40
+            if abs(lstm_score - 0.5) < 0.03:
+                lstm_reliable = False
+            else:
+                lstm_reliable = True
+        else:
+            lstm_reliable = False
+
+        if lstm_reliable:
+            w_cnn = 0.40
+            w_lstm = 0.35
             w_heuristic = 0.25
         else:
             w_cnn = 0.70
             w_lstm = 0.00
             w_heuristic = 0.30
-
-        cnn_score = clamp01(cnn_score)
-        lstm_score = clamp01(lstm_score)
-        heuristic_score = clamp01(heuristic_score)
 
         final_score = clamp01(
             w_cnn * cnn_score
@@ -152,11 +164,15 @@ class FusionEngine:
             + w_heuristic * heuristic_score
         )
 
+        # Boost strong CNN signal directly 
+        if cnn_score > 0.70:
+            final_score = min(1.0, final_score + 0.10)
+
         # --- Verdict ---
-        if final_score < 0.45:
+        if final_score < 0.40:
             verdict = "REAL"
             risk_level = _RISK_LOW
-        elif final_score > 0.65:
+        elif final_score > 0.60:
             verdict = "FAKE"
             risk_level = _RISK_HIGH
         else:

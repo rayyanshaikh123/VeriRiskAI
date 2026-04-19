@@ -158,6 +158,7 @@ class LSTMTemporalDetector:
             self._model = model
             self._input_size = input_size
             self._logger.info("LSTM model loaded from '%s'", model_path)
+            print("LSTM loaded:", model_path, flush=True)
 
         except Exception as exc:
             self._logger.warning("Failed to load LSTM model: %s", exc)
